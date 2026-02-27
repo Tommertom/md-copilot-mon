@@ -164,7 +164,8 @@ app.put("/api/files/:id", saveRateLimiter, async (req, res) => {
     await fs.writeFile(filePath, markdown, "utf8");
     res.json({ path: toDisplayPath(filePath), markdown, html: renderMarkdown(markdown) });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    console.error("Failed to save markdown file", error);
+    res.status(500).json({ error: "Failed to save file" });
   }
 });
 

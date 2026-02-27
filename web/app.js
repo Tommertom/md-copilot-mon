@@ -12,8 +12,13 @@ let loadedId = null;
 let searchQuery = "";
 let initialized = false;
 let loadedMarkdown = "";
+let isSaving = false;
 const knownIds = new Set();
 const unreadIds = new Set();
+
+function updateSaveButtonState() {
+  saveBtn.disabled = isSaving || !selectedId || editorEl.value === loadedMarkdown;
+}
 
 function renderList() {
   fileListEl.innerHTML = "";
@@ -100,7 +105,7 @@ async function loadPreview(id) {
   previewEl.innerHTML = data.html;
   currentFileEl.textContent = data.path;
   downloadBtn.disabled = false;
-  saveBtn.disabled = true;
+  updateSaveButtonState();
   const mermaid = window.__mermaid;
   if (mermaid) {
     mermaid.initialize({ startOnLoad: false });
@@ -118,53 +123,63 @@ downloadBtn.addEventListener("click", () => {
 });
 
 saveBtn.addEventListener("click", async () => {
-  if (!selectedId) return;
+  if (!selectedId || isSaving) return;
+  const savingId = selectedId;
   const markdown = editorEl.value;
-  const res = await fetch(`/api/files/${encodeURIComponent(selectedId)}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ markdown, baseMarkdown: loadedMarkdown })
-  });
-  if (res.status === 409) {
-    let errorData;
-    try {
-      errorData = await res.json();
-    } catch (error) {
-      console.error("Failed to parse conflict response JSON", error);
-      alert("Conflict detected, but failed to load latest file content from server.");
-      return;
-    }
-    const reloadTheirs = window.confirm("This file was modified on disk. Click OK to load the server version (your edits will be lost), or Cancel to keep editing your current version.");
-    if (reloadTheirs) {
-      if (typeof errorData.markdown !== "string") {
-        alert("Failed to reload latest file content.");
+  const baseMarkdown = loadedMarkdown;
+  isSaving = true;
+  updateSaveButtonState();
+  try {
+    const res = await fetch(`/api/files/${encodeURIComponent(savingId)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ markdown, baseMarkdown })
+    });
+    if (res.status === 409) {
+      let errorData;
+      try {
+        errorData = await res.json();
+      } catch (error) {
+        console.error("Failed to parse conflict response JSON", error);
+        alert("Conflict detected, but failed to load latest file content from server.");
         return;
       }
-      loadedMarkdown = errorData.markdown;
-      editorEl.value = errorData.markdown;
-      if (typeof errorData.html === "string") {
-        previewEl.innerHTML = errorData.html;
+      const reloadTheirs = window.confirm("This file was modified on disk. Click OK to load the server version (your edits will be lost), or Cancel to keep editing your current version.");
+      if (reloadTheirs) {
+        if (typeof errorData.markdown !== "string") {
+          alert("Failed to reload latest file content.");
+          return;
+        }
+        loadedMarkdown = errorData.markdown;
+        editorEl.value = errorData.markdown;
+        if (typeof errorData.html === "string") {
+          previewEl.innerHTML = errorData.html;
+        }
+        await refreshFiles();
       }
-      saveBtn.disabled = true;
-      await refreshFiles();
+      return;
     }
-    return;
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      const details = errorData.error ? `: ${errorData.error}` : ` (HTTP ${res.status})`;
+      alert(`Failed to save file${details}`);
+      return;
+    }
+    const data = await res.json();
+    loadedMarkdown = data.markdown;
+    if (selectedId === savingId && editorEl.value === markdown) {
+      editorEl.value = data.markdown;
+      previewEl.innerHTML = data.html;
+    }
+    await refreshFiles();
+  } finally {
+    isSaving = false;
+    updateSaveButtonState();
   }
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    const details = errorData.error ? `: ${errorData.error}` : ` (HTTP ${res.status})`;
-    alert(`Failed to save file${details}`);
-    return;
-  }
-  const data = await res.json();
-  loadedMarkdown = data.markdown;
-  previewEl.innerHTML = data.html;
-  saveBtn.disabled = true;
-  await refreshFiles();
 });
 
 editorEl.addEventListener("input", () => {
-  saveBtn.disabled = !selectedId || editorEl.value === loadedMarkdown;
+  updateSaveButtonState();
 });
 
 searchInputEl.addEventListener("input", (event) => {
