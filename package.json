@@ -1,0 +1,39 @@
+{
+  "name": "md-copilot-viewer",
+  "version": "1.0.0",
+  "description": "Watch markdown files and view them in a browser with DOCX export",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "md-copilot-viewer": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "web",
+    ".env.template",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "chokidar": "^4.0.3",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "html-to-docx": "^1.8.0",
+    "katex": "^0.16.25",
+    "markdown-it": "^14.1.0",
+    "markdown-it-texmath": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/markdown-it": "^14.1.2",
+    "@types/node": "^22.13.10",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  }
+}

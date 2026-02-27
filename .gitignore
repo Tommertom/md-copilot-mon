@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+*.tgz
+.env
+.env.*
+!.env.template
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
