@@ -137,12 +137,16 @@ export class MarkdownIndex {
   }
 
   async stop(): Promise<void> {
-    if (!this.watcher) {
-      return;
-    }
-    await this.watcher.close();
+    const watcher = this.watcher;
     this.watcher = undefined;
-    this.watcherStopping = false;
+    try {
+      if (!watcher) {
+        return;
+      }
+      await watcher.close();
+    } finally {
+      this.watcherStopping = false;
+    }
   }
 
   private isExcluded(filePath: string): boolean {
