@@ -1,5 +1,20 @@
 # Markdown File Viewer for Copilot
+[![npm version](https://img.shields.io/npm/v/md-copilot-viewer.svg)](https://www.npmjs.com/package/md-copilot-viewer)
+
 Simple markdown file viewer for Copilot/session notes, with DOCX export.
+
+## Install from npm
+
+```bash
+npm i -g md-copilot-viewer
+md-copilot-viewer
+```
+
+Or run without installing globally:
+
+```bash
+npx md-copilot-viewer
+```
 
 ## Features
 
