@@ -1,3 +1,5 @@
+import express from "express";
+import rateLimit from "express-rate-limit";
 import express, { type Response } from "express";
 import dotenv from "dotenv";
 import fsSync from "node:fs";
@@ -85,7 +87,15 @@ const index = new MarkdownIndex(roots, loadExistingMd, excludePatterns);
 const changeClients = new Set<Response>();
 const currentFile = fileURLToPath(import.meta.url);
 const webDir = path.resolve(path.dirname(currentFile), "../web");
+const saveRateLimiter = rateLimit({
+  windowMs: 10_000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many save requests, please retry shortly" }
+});
 
+app.use(express.json({ limit: "5mb" }));
 app.use(express.static(webDir));
 
 app.get("/api/files", (_req, res) => {
@@ -127,6 +137,38 @@ app.get("/api/files/:id/docx", async (req, res) => {
   }
 });
 
+app.put("/api/files/:id", saveRateLimiter, async (req, res) => {
+  const filePath = index.resolve(req.params.id);
+  if (!filePath) {
+    res.status(404).json({ error: "File not found" });
+    return;
+  }
+  const markdown = req.body?.markdown;
+  const baseMarkdown = req.body?.baseMarkdown;
+  if (typeof markdown !== "string") {
+    res.status(400).json({ error: "Field 'markdown' must be a string" });
+    return;
+  }
+  if (baseMarkdown !== undefined && typeof baseMarkdown !== "string") {
+    res.status(400).json({ error: "Field 'baseMarkdown' must be a string when provided" });
+    return;
+  }
+  try {
+    const currentMarkdown = await fs.readFile(filePath, "utf8");
+    if (typeof baseMarkdown === "string" && baseMarkdown !== currentMarkdown) {
+      res.status(409).json({
+        error: "Conflict: file changed on disk",
+        path: toDisplayPath(filePath),
+        markdown: currentMarkdown,
+        html: renderMarkdown(currentMarkdown)
+      });
+      return;
+    }
+    await fs.writeFile(filePath, markdown, "utf8");
+    res.json({ path: toDisplayPath(filePath), markdown, html: renderMarkdown(markdown) });
+  } catch (error) {
+    console.error("Failed to save markdown file", error);
+    res.status(500).json({ error: "Failed to save file" });
 app.get("/api/changes", (_req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");

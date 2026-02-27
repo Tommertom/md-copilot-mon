@@ -1,7 +1,7 @@
 # Markdown File Viewer for Copilot
 [![npm version](https://img.shields.io/npm/v/md-copilot-viewer?logo=npm)](https://www.npmjs.com/package/md-copilot-viewer)
 
-Simple markdown file viewer for Copilot/session notes, with DOCX export.
+Simple markdown file viewer/editor for Copilot/session notes, with save and DOCX export.
 
 ## Install from npm
 
@@ -19,6 +19,7 @@ npx md-copilot-viewer
 ## Features
 
 - Realtime monitoring of `.md` files, so new and updated notes appear automatically.
+- Built-in markdown editor with save button for updating files directly from the UI.
 - Live markdown preview with a quick file list for fast context switching.
 - Automatically surfaces plans generated in Copilot plan mode.
 - Optional DOCX export for sharing notes outside the app.
@@ -26,8 +27,13 @@ npx md-copilot-viewer
 ## How it works
 
 1. A Node watcher tracks markdown file changes (create/update) in realtime.
+<<<<<<< copilot/implement-md-viewer-editor
+2. The backend serves a capped, recent file list plus rendered markdown content, and accepts file save requests.
+3. The web UI refreshes the list/preview automatically, lets you edit and save markdown, and supports DOCX export.
+=======
 2. The backend serves a capped, recent file list plus rendered markdown content.
 3. The backend pushes file-change events via SSE so the web UI refreshes list/preview automatically and supports DOCX export.
+>>>>>>> main
 
 ## Screenshot
 ![Screenshot 1 - file list and markdown preview](https://raw.githubusercontent.com/Tommertom/md-copilot-mon/main/web/screenshots/screenshot-1.png)
@@ -74,6 +80,8 @@ FILE_MAX_LIMIT=200
   `title` is the first line without `# ` when the first line starts with `# `; otherwise an empty string.
 - `GET /api/files/:id`  
   Returns one file as `{ path, markdown, html }`.
+- `PUT /api/files/:id`  
+  Saves markdown content from `{ markdown, baseMarkdown? }` and returns `{ path, markdown, html }`. If `baseMarkdown` is provided and the file changed on disk meanwhile, returns `409` with latest `{ path, markdown, html }` so the UI can reload theirs or keep mine.
 - `GET /api/files/:id/docx`  
   Downloads the selected markdown file as `.docx`.
 - `GET /api/changes`  

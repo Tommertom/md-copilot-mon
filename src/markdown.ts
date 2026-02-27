@@ -3,7 +3,7 @@ import texmath from "markdown-it-texmath";
 import katex from "katex";
 import HTMLtoDOCX from "html-to-docx";
 
-const md = new MarkdownIt({ html: true, linkify: true, breaks: true })
+const md = new MarkdownIt({ html: false, linkify: true, breaks: true })
   .use(texmath, { engine: katex, delimiters: "dollars" });
 
 const defaultFence = md.renderer.rules.fence;
