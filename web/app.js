@@ -108,11 +108,18 @@ searchInputEl.addEventListener("input", (event) => {
 refreshFiles();
 
 let reconnectTimer = null;
+let refreshDebounceTimer = null;
 
 function connectChangeEvents() {
   const changeEvents = new EventSource("/api/changes");
   changeEvents.onmessage = () => {
-    void refreshFiles();
+    if (refreshDebounceTimer !== null) {
+      clearTimeout(refreshDebounceTimer);
+    }
+    refreshDebounceTimer = setTimeout(() => {
+      refreshDebounceTimer = null;
+      void refreshFiles();
+    }, 200);
   };
   changeEvents.onerror = () => {
     changeEvents.close();
