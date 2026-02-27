@@ -26,6 +26,7 @@ export class MarkdownIndex {
   private readonly byId = new Map<string, string>();
   private readonly changeListeners = new Set<() => void>();
   private watcher?: FSWatcher;
+  private watcherStopping = false;
 
   constructor(
     private readonly roots: string[],
@@ -37,6 +38,7 @@ export class MarkdownIndex {
     if (this.loadExistingOnStart) {
       await this.seedExisting();
     }
+    this.watcherStopping = false;
     this.watcher = chokidar.watch(this.roots, {
       ignored: (p) => p.includes("/node_modules/") || p.includes("/.git/"),
       persistent: true,
@@ -57,6 +59,27 @@ export class MarkdownIndex {
       if (this.remove(filePath)) {
         this.notifyChanged();
       }
+    });
+    this.watcher.on("error", (error: unknown) => {
+      const errorWithCode = typeof error === "object" && error !== null
+        ? (error as Partial<NodeJS.ErrnoException>)
+        : undefined;
+      if (errorWithCode?.code === "ENOSPC") {
+        if (this.watcherStopping) {
+          return;
+        }
+        this.watcherStopping = true;
+        console.error("File watcher limit reached (ENOSPC). Continuing without live file watching.");
+        void this.stop().catch((stopError) => console.error("Failed to stop watcher after ENOSPC:", stopError));
+        return;
+      }
+      const message =
+        error instanceof Error
+          ? error.stack ?? error.message
+          : error != null
+            ? String(error)
+            : "Unknown watcher error";
+      console.error("File watcher error:", message);
     });
   }
 
@@ -142,11 +165,16 @@ export class MarkdownIndex {
   }
 
   async stop(): Promise<void> {
-    if (!this.watcher) {
-      return;
-    }
-    await this.watcher.close();
+    const watcher = this.watcher;
     this.watcher = undefined;
+    try {
+      if (!watcher) {
+        return;
+      }
+      await watcher.close();
+    } finally {
+      this.watcherStopping = false;
+    }
   }
 
   private isExcluded(filePath: string): boolean {
