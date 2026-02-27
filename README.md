@@ -1,5 +1,5 @@
 # Markdown File Viewer for Copilot
-[![npm version](https://img.shields.io/npm/v/md-copilot-viewer.svg)](https://www.npmjs.com/package/md-copilot-viewer)
+[![npm version](https://img.shields.io/npm/v/md-copilot-viewer?logo=npm)](https://www.npmjs.com/package/md-copilot-viewer)
 
 Simple markdown file viewer for Copilot/session notes, with DOCX export.
 
@@ -28,10 +28,8 @@ npx md-copilot-viewer
 2. The backend serves a capped, recent file list plus rendered markdown content.
 3. The web UI refreshes the list/preview automatically and supports DOCX export.
 
-## Screenshots
-
-![Screenshot 1 - file list and markdown preview](web/screenshots/screenshot-1.png)
-![Screenshot 2 - rendered markdown and export](web/screenshots/screenshot-2.png)
+## Screenshot
+![Screenshot 1 - file list and markdown preview](https://raw.githubusercontent.com/Tommertom/md-copilot-mon/main/web/screenshots/screenshot-1.png)
 
 ## Run
 
