@@ -141,7 +141,11 @@ app.get("/api/changes", (_req, res) => {
 
 index.onChange(() => {
   for (const client of changeClients) {
-    client.write("data: changed\n\n");
+    try {
+      client.write("data: changed\n\n");
+    } catch {
+      changeClients.delete(client);
+    }
   }
 });
 
