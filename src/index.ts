@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import fsSync from "node:fs";
 import fs from "node:fs/promises";
+import { createServer } from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -127,14 +128,29 @@ app.get("/api/files/:id/docx", async (req, res) => {
 
 async function start(): Promise<void> {
   await index.start();
-  app.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}`);
-    console.log(`Config loaded from ${envFilePath}`);
-    console.log(`LOAD_EXISTING_MD=${String(loadExistingMd)}`);
-    console.log(`EXCLUDE_PATTERN=${excludePatterns.join(",") || "(none)"}`);
-    console.log(`FILE_MAX_LIMIT=${String(fileMaxLimit)}`);
-    console.log(`Watching roots:\n- ${roots.join("\n- ")}`);
-  });
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const server = createServer(app);
+      server.once("error", reject);
+      server.listen(port, () => resolve());
+    });
+  } catch (error) {
+    await index.stop();
+    const startError = error as NodeJS.ErrnoException;
+    if (startError.code === "EADDRINUSE") {
+      console.error(`Port ${port} is already in use. Shutting down gracefully.`);
+    } else {
+      console.error(`Failed to start server: ${startError.message}`);
+    }
+    process.exit(1);
+    return;
+  }
+  console.log(`Server running on http://localhost:${port}`);
+  console.log(`Config loaded from ${envFilePath}`);
+  console.log(`LOAD_EXISTING_MD=${String(loadExistingMd)}`);
+  console.log(`EXCLUDE_PATTERN=${excludePatterns.join(",") || "(none)"}`);
+  console.log(`FILE_MAX_LIMIT=${String(fileMaxLimit)}`);
+  console.log(`Watching roots:\n- ${roots.join("\n- ")}`);
 }
 
 void start();
