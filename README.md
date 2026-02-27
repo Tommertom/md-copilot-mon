@@ -1,6 +1,18 @@
 # Markdown File Viewer for Copilot
 Simple markdown file viewer for Copilot/session notes, with DOCX export.
 
+## Features
+
+- Realtime monitoring of `.md` files, so new and updated notes appear automatically.
+- Live markdown preview with a quick file list for fast context switching.
+- Optional DOCX export for sharing notes outside the app.
+
+## How it works
+
+1. A Node watcher tracks markdown file changes (create/update) in realtime.
+2. The backend serves a capped, recent file list plus rendered markdown content.
+3. The web UI refreshes the list/preview automatically and supports DOCX export.
+
 ## Screenshots
 
 ![Screenshot 1 - file list and markdown preview](web/screenshots/screenshot-1.png)
@@ -39,3 +51,12 @@ FILE_MAX_LIMIT=200
   Example: `"checkpoints/index.md","tmp/","node_modules/"`
 - `FILE_MAX_LIMIT`  
   Maximum number of most recently updated markdown files returned to the frontend (default `200`).
+
+## API endpoints
+
+- `GET /api/files`  
+  Returns recent markdown files (max `FILE_MAX_LIMIT`) with `id`, display `path`, and `mtimeMs`.
+- `GET /api/files/:id`  
+  Returns one file as `{ path, markdown, html }`.
+- `GET /api/files/:id/docx`  
+  Downloads the selected markdown file as `.docx`.
