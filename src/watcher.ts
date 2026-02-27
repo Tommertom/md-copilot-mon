@@ -45,6 +45,15 @@ export class MarkdownIndex {
     this.watcher.on("add", (filePath: string) => void this.upsert(filePath));
     this.watcher.on("change", (filePath: string) => void this.upsert(filePath));
     this.watcher.on("unlink", (filePath: string) => this.remove(filePath));
+    this.watcher.on("error", (error: unknown) => {
+      const watcherError = error as NodeJS.ErrnoException;
+      if (watcherError.code === "ENOSPC") {
+        console.error("File watcher limit reached (ENOSPC). Continuing without live file watching.");
+        void this.stop().catch(() => undefined);
+        return;
+      }
+      console.error(`File watcher error: ${watcherError.message}`);
+    });
   }
 
   private async seedExisting(): Promise<void> {
