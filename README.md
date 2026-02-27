@@ -35,15 +35,16 @@ npx md-copilot-viewer
 
 ```bash
 npm install
-cp .env.template .env
 npm run dev
 ```
 
-`npm run dev` uses `PORT` from `.env` (default `3000`), so open:
+On first start, the app creates `.env-md-copilot-viewer` from `.env.template` if it does not exist.
+
+`npm run dev` uses `PORT` from `.env-md-copilot-viewer` (default `3000`), so open:
 - `http://localhost:3000` (default), or
 - `http://localhost:<your PORT value>`
 
-## `.env` config
+## `.env-md-copilot-viewer` config
 
 `.env.template` includes:
 

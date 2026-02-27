@@ -1,5 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
+import fsSync from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -7,7 +8,43 @@ import { fileURLToPath } from "node:url";
 import { markdownToDocx, renderMarkdown } from "./markdown.js";
 import { defaultRoots, MarkdownIndex } from "./watcher.js";
 
-dotenv.config();
+const ENV_FILE_NAME = ".env-md-copilot-viewer";
+const ENV_TEMPLATE_NAME = ".env.template";
+const DEFAULT_ENV_TEMPLATE = `# Server port used by \`npm run dev\` / \`npm start\` (defaults to 3000)
+PORT=3000
+
+# true: include existing .md files at startup, false: only track newly created files after startup
+LOAD_EXISTING_MD=true
+
+# Comma-separated quoted path substrings to exclude from results
+# Example: "checkpoints/index.md","tmp/","node_modules/"
+EXCLUDE_PATTERN='"checkpoints/index.md"'
+
+# Maximum number of most recently updated files sent to the frontend
+FILE_MAX_LIMIT=200
+`;
+
+function ensureEnvFile(): string {
+  const cwdEnvPath = path.resolve(process.cwd(), ENV_FILE_NAME);
+  if (fsSync.existsSync(cwdEnvPath)) {
+    return cwdEnvPath;
+  }
+
+  const currentFile = fileURLToPath(import.meta.url);
+  const packageRoot = path.resolve(path.dirname(currentFile), "..");
+  const packageTemplatePath = path.resolve(packageRoot, ENV_TEMPLATE_NAME);
+
+  if (fsSync.existsSync(packageTemplatePath)) {
+    fsSync.copyFileSync(packageTemplatePath, cwdEnvPath);
+    return cwdEnvPath;
+  }
+
+  fsSync.writeFileSync(cwdEnvPath, DEFAULT_ENV_TEMPLATE, "utf8");
+  return cwdEnvPath;
+}
+
+const envFilePath = ensureEnvFile();
+dotenv.config({ path: envFilePath });
 
 function parseExcludePatterns(rawValue: string | undefined): string[] {
   if (!rawValue) {
@@ -92,6 +129,7 @@ async function start(): Promise<void> {
   await index.start();
   app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
+    console.log(`Config loaded from ${envFilePath}`);
     console.log(`LOAD_EXISTING_MD=${String(loadExistingMd)}`);
     console.log(`EXCLUDE_PATTERN=${excludePatterns.join(",") || "(none)"}`);
     console.log(`FILE_MAX_LIMIT=${String(fileMaxLimit)}`);
