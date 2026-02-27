@@ -141,11 +141,26 @@ app.put("/api/files/:id", saveRateLimiter, async (req, res) => {
     return;
   }
   const markdown = req.body?.markdown;
+  const baseMarkdown = req.body?.baseMarkdown;
   if (typeof markdown !== "string") {
     res.status(400).json({ error: "Field 'markdown' must be a string" });
     return;
   }
+  if (baseMarkdown !== undefined && typeof baseMarkdown !== "string") {
+    res.status(400).json({ error: "Field 'baseMarkdown' must be a string when provided" });
+    return;
+  }
   try {
+    const currentMarkdown = await fs.readFile(filePath, "utf8");
+    if (typeof baseMarkdown === "string" && baseMarkdown !== currentMarkdown) {
+      res.status(409).json({
+        error: "Conflict: file changed on disk",
+        path: toDisplayPath(filePath),
+        markdown: currentMarkdown,
+        html: renderMarkdown(currentMarkdown)
+      });
+      return;
+    }
     await fs.writeFile(filePath, markdown, "utf8");
     res.json({ path: toDisplayPath(filePath), markdown, html: renderMarkdown(markdown) });
   } catch (error) {

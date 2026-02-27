@@ -123,8 +123,26 @@ saveBtn.addEventListener("click", async () => {
   const res = await fetch(`/api/files/${encodeURIComponent(selectedId)}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ markdown })
+    body: JSON.stringify({ markdown, baseMarkdown: loadedMarkdown })
   });
+  if (res.status === 409) {
+    const errorData = await res.json().catch(() => ({}));
+    const reloadTheirs = window.confirm("This file changed on disk. Press OK to reload theirs or Cancel to keep mine.");
+    if (reloadTheirs) {
+      if (typeof errorData.markdown !== "string") {
+        alert("Failed to reload latest file content.");
+        return;
+      }
+      loadedMarkdown = errorData.markdown;
+      editorEl.value = errorData.markdown;
+      if (typeof errorData.html === "string") {
+        previewEl.innerHTML = errorData.html;
+      }
+      saveBtn.disabled = true;
+      await refreshFiles();
+    }
+    return;
+  }
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
     const details = errorData.error ? `: ${errorData.error}` : ` (HTTP ${res.status})`;

@@ -74,6 +74,6 @@ FILE_MAX_LIMIT=200
 - `GET /api/files/:id`  
   Returns one file as `{ path, markdown, html }`.
 - `PUT /api/files/:id`  
-  Saves markdown content from `{ markdown }` and returns `{ path, markdown, html }`.
+  Saves markdown content from `{ markdown, baseMarkdown? }` and returns `{ path, markdown, html }`. If `baseMarkdown` is provided and the file changed on disk meanwhile, returns `409` with latest `{ path, markdown, html }` so the UI can reload theirs or keep mine.
 - `GET /api/files/:id/docx`  
   Downloads the selected markdown file as `.docx`.
