@@ -27,7 +27,7 @@ npx md-copilot-viewer
 
 1. A Node watcher tracks markdown file changes (create/update) in realtime.
 2. The backend serves a capped, recent file list plus rendered markdown content.
-3. The web UI refreshes the list/preview automatically and supports DOCX export.
+3. The backend pushes file-change events via SSE so the web UI refreshes list/preview automatically and supports DOCX export.
 
 ## Screenshot
 ![Screenshot 1 - file list and markdown preview](https://raw.githubusercontent.com/Tommertom/md-copilot-mon/main/web/screenshots/screenshot-1.png)
@@ -76,3 +76,5 @@ FILE_MAX_LIMIT=200
   Returns one file as `{ path, markdown, html }`.
 - `GET /api/files/:id/docx`  
   Downloads the selected markdown file as `.docx`.
+- `GET /api/changes`  
+  Server-Sent Events stream that notifies the web app when markdown files change.
