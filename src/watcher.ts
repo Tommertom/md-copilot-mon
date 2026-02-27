@@ -13,6 +13,14 @@ function isMarkdown(filePath: string): boolean {
   return filePath.toLowerCase().endsWith(".md");
 }
 
+function extractTitle(markdown: string): string {
+  const [firstLine = ""] = markdown.split(/\r?\n/, 1);
+  if (!firstLine.startsWith("# ")) {
+    return "";
+  }
+  return firstLine.slice(2).trim();
+}
+
 export class MarkdownIndex {
   private readonly byPath = new Map<string, FileEntry>();
   private readonly byId = new Map<string, string>();
@@ -23,7 +31,7 @@ export class MarkdownIndex {
     private readonly roots: string[],
     private readonly loadExistingOnStart: boolean,
     private readonly excludePatterns: string[]
-  ) {}
+  ) { }
 
   async start(): Promise<void> {
     if (this.loadExistingOnStart) {
@@ -90,9 +98,10 @@ export class MarkdownIndex {
       if (!stat.isFile()) {
         return false;
       }
+      const markdown = await fs.readFile(filePath, "utf8");
       const id = toId(filePath);
       const previous = this.byPath.get(filePath);
-      const entry: FileEntry = { id, path: filePath, mtimeMs: stat.mtimeMs };
+      const entry: FileEntry = { id, path: filePath, title: extractTitle(markdown), mtimeMs: stat.mtimeMs };
       this.byPath.set(filePath, entry);
       this.byId.set(id, filePath);
       return !previous || previous.mtimeMs !== entry.mtimeMs;
@@ -130,6 +139,14 @@ export class MarkdownIndex {
     for (const listener of this.changeListeners) {
       listener();
     }
+  }
+
+  async stop(): Promise<void> {
+    if (!this.watcher) {
+      return;
+    }
+    await this.watcher.close();
+    this.watcher = undefined;
   }
 
   private isExcluded(filePath: string): boolean {
