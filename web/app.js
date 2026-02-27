@@ -115,4 +115,31 @@ searchInputEl.addEventListener("input", (event) => {
 });
 
 refreshFiles();
-setInterval(refreshFiles, 2000);
+
+let reconnectTimer = null;
+let refreshDebounceTimer = null;
+
+function connectChangeEvents() {
+  const changeEvents = new EventSource("/api/changes");
+  changeEvents.onmessage = () => {
+    if (refreshDebounceTimer !== null) {
+      clearTimeout(refreshDebounceTimer);
+    }
+    refreshDebounceTimer = setTimeout(() => {
+      refreshDebounceTimer = null;
+      void refreshFiles();
+    }, 200);
+  };
+  changeEvents.onerror = () => {
+    changeEvents.close();
+    if (reconnectTimer) {
+      return;
+    }
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      connectChangeEvents();
+    }, 1000);
+  };
+}
+
+connectChangeEvents();
