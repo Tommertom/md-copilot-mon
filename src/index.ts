@@ -84,6 +84,7 @@ const index = new MarkdownIndex(roots, loadExistingMd, excludePatterns);
 const currentFile = fileURLToPath(import.meta.url);
 const webDir = path.resolve(path.dirname(currentFile), "../web");
 
+app.use(express.json({ limit: "5mb" }));
 app.use(express.static(webDir));
 
 app.get("/api/files", (_req, res) => {
@@ -120,6 +121,25 @@ app.get("/api/files/:id/docx", async (req, res) => {
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
     res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
     res.send(buffer);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+app.put("/api/files/:id", async (req, res) => {
+  const filePath = index.resolve(req.params.id);
+  if (!filePath) {
+    res.status(404).json({ error: "File not found" });
+    return;
+  }
+  const markdown = req.body?.markdown;
+  if (typeof markdown !== "string") {
+    res.status(400).json({ error: "Field 'markdown' must be a string" });
+    return;
+  }
+  try {
+    await fs.writeFile(filePath, markdown, "utf8");
+    res.json({ path: toDisplayPath(filePath), markdown, html: renderMarkdown(markdown) });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }

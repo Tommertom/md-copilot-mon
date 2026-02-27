@@ -1,13 +1,17 @@
 const fileListEl = document.getElementById("file-list");
 const searchInputEl = document.getElementById("file-search");
 const previewEl = document.getElementById("preview");
+const editorEl = document.getElementById("editor");
 const currentFileEl = document.getElementById("current-file");
 const downloadBtn = document.getElementById("download-docx");
+const saveBtn = document.getElementById("save-file");
 
 let files = [];
 let selectedId = null;
+let loadedId = null;
 let searchQuery = "";
 let initialized = false;
+let loadedMarkdown = "";
 const knownIds = new Set();
 const unreadIds = new Set();
 
@@ -63,11 +67,20 @@ async function refreshFiles() {
   }
   renderList();
   if (selectedId) {
-    await loadPreview(selectedId);
+    const canReloadFromServer = saveBtn.disabled || loadedId !== selectedId;
+    if (canReloadFromServer) {
+      await loadPreview(selectedId);
+    }
   } else {
+    loadedId = null;
+  }
+  if (!selectedId) {
     previewEl.innerHTML = "<p>No markdown files found yet.</p>";
+    editorEl.value = "";
+    editorEl.disabled = true;
     currentFileEl.textContent = "";
     downloadBtn.disabled = true;
+    saveBtn.disabled = true;
   }
 }
 
@@ -79,11 +92,16 @@ async function loadPreview(id) {
   }
   const data = await res.json();
   selectedId = id;
+  loadedId = id;
   unreadIds.delete(id);
+  loadedMarkdown = data.markdown;
   renderList();
+  editorEl.value = data.markdown;
+  editorEl.disabled = false;
   previewEl.innerHTML = data.html;
   currentFileEl.textContent = data.path;
   downloadBtn.disabled = false;
+  saveBtn.disabled = true;
   const mermaid = window.__mermaid;
   if (mermaid) {
     mermaid.initialize({ startOnLoad: false });
@@ -98,6 +116,29 @@ async function selectFile(id) {
 downloadBtn.addEventListener("click", () => {
   if (!selectedId) return;
   window.location.href = `/api/files/${encodeURIComponent(selectedId)}/docx`;
+});
+
+saveBtn.addEventListener("click", async () => {
+  if (!selectedId) return;
+  const markdown = editorEl.value;
+  const res = await fetch(`/api/files/${encodeURIComponent(selectedId)}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ markdown })
+  });
+  if (!res.ok) {
+    alert("Failed to save file.");
+    return;
+  }
+  const data = await res.json();
+  loadedMarkdown = data.markdown;
+  previewEl.innerHTML = data.html;
+  saveBtn.disabled = true;
+  await refreshFiles();
+});
+
+editorEl.addEventListener("input", () => {
+  saveBtn.disabled = !selectedId || editorEl.value === loadedMarkdown;
 });
 
 searchInputEl.addEventListener("input", (event) => {
