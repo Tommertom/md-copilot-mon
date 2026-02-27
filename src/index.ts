@@ -1,4 +1,4 @@
-import express from "express";
+import express, { type Response } from "express";
 import dotenv from "dotenv";
 import fsSync from "node:fs";
 import fs from "node:fs/promises";
@@ -81,6 +81,7 @@ const fileMaxLimit = parseFileMaxLimit(process.env.FILE_MAX_LIMIT);
 const cwd = process.cwd();
 const roots = defaultRoots(cwd);
 const index = new MarkdownIndex(roots, loadExistingMd, excludePatterns);
+const changeClients = new Set<Response>();
 const currentFile = fileURLToPath(import.meta.url);
 const webDir = path.resolve(path.dirname(currentFile), "../web");
 
@@ -122,6 +123,25 @@ app.get("/api/files/:id/docx", async (req, res) => {
     res.send(buffer);
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+app.get("/api/changes", (_req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders();
+  res.write("data: connected\n\n");
+  changeClients.add(res);
+  res.on("close", () => {
+    changeClients.delete(res);
+  });
+});
+
+index.onChange(() => {
+  for (const client of changeClients) {
+    client.write("data: changed\n\n");
   }
 });
 

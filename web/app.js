@@ -106,4 +106,8 @@ searchInputEl.addEventListener("input", (event) => {
 });
 
 refreshFiles();
-setInterval(refreshFiles, 2000);
+
+const changeEvents = new EventSource("/api/changes");
+changeEvents.onmessage = () => {
+  void refreshFiles();
+};
