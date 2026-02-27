@@ -1,5 +1,6 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
+import express, { type Response } from "express";
 import dotenv from "dotenv";
 import fsSync from "node:fs";
 import fs from "node:fs/promises";
@@ -83,6 +84,7 @@ const fileMaxLimit = parseFileMaxLimit(process.env.FILE_MAX_LIMIT);
 const cwd = process.cwd();
 const roots = defaultRoots(cwd);
 const index = new MarkdownIndex(roots, loadExistingMd, excludePatterns);
+const changeClients = new Set<Response>();
 const currentFile = fileURLToPath(import.meta.url);
 const webDir = path.resolve(path.dirname(currentFile), "../web");
 const saveRateLimiter = rateLimit({
@@ -167,6 +169,25 @@ app.put("/api/files/:id", saveRateLimiter, async (req, res) => {
   } catch (error) {
     console.error("Failed to save markdown file", error);
     res.status(500).json({ error: "Failed to save file" });
+app.get("/api/changes", (_req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders();
+  changeClients.add(res);
+  res.on("close", () => {
+    changeClients.delete(res);
+  });
+});
+
+index.onChange(() => {
+  for (const client of changeClients) {
+    try {
+      client.write("data: changed\n\n");
+    } catch {
+      changeClients.delete(client);
+    }
   }
 });
 
