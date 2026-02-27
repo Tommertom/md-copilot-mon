@@ -29,9 +29,11 @@ function generateStyledHtml(htmlContent: string, title: string): string {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="color-scheme" content="light">
   <title>${title}</title>
   <style>
-    body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.5; color: #333; }
+    :root { color-scheme: light; }
+    body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.5; color: #333; background: #fff; }
     h1 { font-size: 24pt; margin: 24pt 0 12pt; color: #2c3e50; }
     h2 { font-size: 18pt; margin: 18pt 0 10pt; color: #34495e; }
     h3 { font-size: 14pt; margin: 14pt 0 8pt; }

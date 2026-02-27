@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { markdownToDocx, renderMarkdown } from "./markdown.js";
@@ -16,10 +17,30 @@ function parseExcludePatterns(rawValue: string | undefined): string[] {
   return [...matches].map((match) => match[1]).filter((item) => item.length > 0);
 }
 
+function parseFileMaxLimit(rawValue: string | undefined): number {
+  const parsed = Number(rawValue);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return 200;
+  }
+  return Math.floor(parsed);
+}
+
+function toDisplayPath(filePath: string): string {
+  const homePath = os.homedir();
+  if (filePath === homePath) {
+    return "~";
+  }
+  if (filePath.startsWith(`${homePath}/`)) {
+    return `~/${filePath.slice(homePath.length + 1)}`;
+  }
+  return filePath;
+}
+
 const app = express();
 const port = Number(process.env.PORT || 3000);
 const loadExistingMd = process.env.LOAD_EXISTING_MD !== "false";
 const excludePatterns = parseExcludePatterns(process.env.EXCLUDE_PATTERN);
+const fileMaxLimit = parseFileMaxLimit(process.env.FILE_MAX_LIMIT);
 const cwd = process.cwd();
 const roots = defaultRoots(cwd);
 const index = new MarkdownIndex(roots, loadExistingMd, excludePatterns);
@@ -29,7 +50,10 @@ const webDir = path.resolve(path.dirname(currentFile), "../web");
 app.use(express.static(webDir));
 
 app.get("/api/files", (_req, res) => {
-  res.json(index.list());
+  res.json(index.list().slice(0, fileMaxLimit).map((entry) => ({
+    ...entry,
+    path: toDisplayPath(entry.path)
+  })));
 });
 
 app.get("/api/files/:id", async (req, res) => {
@@ -40,7 +64,7 @@ app.get("/api/files/:id", async (req, res) => {
   }
   try {
     const markdown = await fs.readFile(filePath, "utf8");
-    res.json({ path: filePath, markdown, html: renderMarkdown(markdown) });
+    res.json({ path: toDisplayPath(filePath), markdown, html: renderMarkdown(markdown) });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
@@ -70,6 +94,7 @@ async function start(): Promise<void> {
     console.log(`Server running on http://localhost:${port}`);
     console.log(`LOAD_EXISTING_MD=${String(loadExistingMd)}`);
     console.log(`EXCLUDE_PATTERN=${excludePatterns.join(",") || "(none)"}`);
+    console.log(`FILE_MAX_LIMIT=${String(fileMaxLimit)}`);
     console.log(`Watching roots:\n- ${roots.join("\n- ")}`);
   });
 }
