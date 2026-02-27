@@ -1,4 +1,5 @@
 import express from "express";
+import { rateLimit } from "express-rate-limit";
 import dotenv from "dotenv";
 import fsSync from "node:fs";
 import fs from "node:fs/promises";
@@ -83,6 +84,13 @@ const roots = defaultRoots(cwd);
 const index = new MarkdownIndex(roots, loadExistingMd, excludePatterns);
 const currentFile = fileURLToPath(import.meta.url);
 const webDir = path.resolve(path.dirname(currentFile), "../web");
+const saveRateLimiter = rateLimit({
+  windowMs: 10_000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many save requests, please retry shortly" }
+});
 
 app.use(express.json({ limit: "5mb" }));
 app.use(express.static(webDir));
@@ -126,7 +134,7 @@ app.get("/api/files/:id/docx", async (req, res) => {
   }
 });
 
-app.put("/api/files/:id", async (req, res) => {
+app.put("/api/files/:id", saveRateLimiter, async (req, res) => {
   const filePath = index.resolve(req.params.id);
   if (!filePath) {
     res.status(404).json({ error: "File not found" });

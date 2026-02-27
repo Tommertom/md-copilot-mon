@@ -67,14 +67,13 @@ async function refreshFiles() {
   }
   renderList();
   if (selectedId) {
-    const canReloadFromServer = saveBtn.disabled || loadedId !== selectedId;
-    if (canReloadFromServer) {
+    const hasUnsavedChanges = editorEl.value !== loadedMarkdown;
+    const shouldReloadFromServer = !hasUnsavedChanges || loadedId !== selectedId;
+    if (shouldReloadFromServer) {
       await loadPreview(selectedId);
     }
   } else {
     loadedId = null;
-  }
-  if (!selectedId) {
     previewEl.innerHTML = "<p>No markdown files found yet.</p>";
     editorEl.value = "";
     editorEl.disabled = true;
@@ -127,7 +126,9 @@ saveBtn.addEventListener("click", async () => {
     body: JSON.stringify({ markdown })
   });
   if (!res.ok) {
-    alert("Failed to save file.");
+    const errorData = await res.json().catch(() => ({}));
+    const details = errorData.error ? `: ${errorData.error}` : ` (HTTP ${res.status})`;
+    alert(`Failed to save file${details}`);
     return;
   }
   const data = await res.json();
