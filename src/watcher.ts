@@ -60,8 +60,13 @@ export class MarkdownIndex {
         void this.stop().catch((stopError) => console.error("Failed to stop watcher after ENOSPC:", stopError));
         return;
       }
-      const message = error instanceof Error ? error.message : "Unknown watcher error";
-      console.error(`File watcher error: ${message}`);
+      const message =
+        error instanceof Error
+          ? error.stack ?? error.message
+          : error != null
+            ? String(error)
+            : "Unknown watcher error";
+      console.error("File watcher error:", message);
     });
   }
 
