@@ -126,8 +126,15 @@ saveBtn.addEventListener("click", async () => {
     body: JSON.stringify({ markdown, baseMarkdown: loadedMarkdown })
   });
   if (res.status === 409) {
-    const errorData = await res.json().catch(() => ({}));
-    const reloadTheirs = window.confirm("This file changed on disk. Press OK to reload theirs or Cancel to keep mine.");
+    let errorData;
+    try {
+      errorData = await res.json();
+    } catch (error) {
+      console.error("Failed to parse conflict response JSON", error);
+      alert("Conflict detected, but failed to load latest file content from server.");
+      return;
+    }
+    const reloadTheirs = window.confirm("This file was modified on disk. Click OK to load the server version (your edits will be lost), or Cancel to keep editing your current version.");
     if (reloadTheirs) {
       if (typeof errorData.markdown !== "string") {
         alert("Failed to reload latest file content.");
