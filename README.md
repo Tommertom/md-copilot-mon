@@ -21,6 +21,7 @@ npx md-copilot-viewer
 - Realtime monitoring of `.md` files, so new and updated notes appear automatically.
 - Built-in markdown editor with save button for updating files directly from the UI.
 - Live markdown preview with a quick file list for fast context switching.
+- Automatically surfaces plans generated in Copilot plan mode.
 - Optional DOCX export for sharing notes outside the app.
 
 ## How it works
@@ -70,7 +71,8 @@ FILE_MAX_LIMIT=200
 ## API endpoints
 
 - `GET /api/files`  
-  Returns recent markdown files (max `FILE_MAX_LIMIT`) with `id`, display `path`, and `mtimeMs`.
+  Returns recent markdown files (max `FILE_MAX_LIMIT`) with `id`, display `path`, `title`, and `mtimeMs`.  
+  `title` is the first line without `# ` when the first line starts with `# `; otherwise an empty string.
 - `GET /api/files/:id`  
   Returns one file as `{ path, markdown, html }`.
 - `PUT /api/files/:id`  

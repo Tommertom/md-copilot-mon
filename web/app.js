@@ -23,13 +23,22 @@ function updateSaveButtonState() {
 function renderList() {
   fileListEl.innerHTML = "";
   const query = searchQuery.toLowerCase();
-  const visibleFiles = query ? files.filter((file) => file.path.toLowerCase().includes(query)) : files;
+  const visibleFiles = query
+    ? files.filter((file) =>
+      file.path.toLowerCase().includes(query) || (file.title || "").toLowerCase().includes(query))
+    : files;
   for (const file of visibleFiles) {
     const li = document.createElement("li");
     li.className = selectedId === file.id ? "active" : "";
-    const label = document.createElement("span");
+    const label = document.createElement("div");
     label.className = "file-item-label";
-    label.textContent = `${file.path} (${new Date(file.mtimeMs).toLocaleString()})`;
+    const title = document.createElement("span");
+    title.className = "file-item-title";
+    title.textContent = file.title || file.path;
+    const filePath = document.createElement("span");
+    filePath.className = "file-item-path";
+    filePath.textContent = file.path;
+    label.append(title, filePath);
     li.appendChild(label);
     if (unreadIds.has(file.id)) {
       const dot = document.createElement("span");
