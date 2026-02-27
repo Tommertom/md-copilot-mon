@@ -132,7 +132,6 @@ app.get("/api/changes", (_req, res) => {
   res.setHeader("Connection", "keep-alive");
   res.setHeader("X-Accel-Buffering", "no");
   res.flushHeaders();
-  res.write("data: connected\n\n");
   changeClients.add(res);
   res.on("close", () => {
     changeClients.delete(res);
