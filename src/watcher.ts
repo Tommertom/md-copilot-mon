@@ -46,13 +46,16 @@ export class MarkdownIndex {
     this.watcher.on("change", (filePath: string) => void this.upsert(filePath));
     this.watcher.on("unlink", (filePath: string) => this.remove(filePath));
     this.watcher.on("error", (error: unknown) => {
-      const watcherError = error as NodeJS.ErrnoException;
-      if (watcherError.code === "ENOSPC") {
+      const errorWithCode = typeof error === "object" && error !== null
+        ? (error as Partial<NodeJS.ErrnoException>)
+        : undefined;
+      if (errorWithCode?.code === "ENOSPC") {
         console.error("File watcher limit reached (ENOSPC). Continuing without live file watching.");
-        void this.stop().catch(() => undefined);
+        void this.stop().catch((stopError) => console.error("Failed to stop watcher after ENOSPC:", stopError));
         return;
       }
-      console.error(`File watcher error: ${watcherError.message}`);
+      const message = error instanceof Error ? error.message : "Unknown watcher error";
+      console.error(`File watcher error: ${message}`);
     });
   }
 
