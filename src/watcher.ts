@@ -25,6 +25,7 @@ export class MarkdownIndex {
   private readonly byPath = new Map<string, FileEntry>();
   private readonly byId = new Map<string, string>();
   private watcher?: FSWatcher;
+  private watcherStopping = false;
 
   constructor(
     private readonly roots: string[],
@@ -36,6 +37,7 @@ export class MarkdownIndex {
     if (this.loadExistingOnStart) {
       await this.seedExisting();
     }
+    this.watcherStopping = false;
     this.watcher = chokidar.watch(this.roots, {
       ignored: (p) => p.includes("/node_modules/") || p.includes("/.git/"),
       persistent: true,
@@ -50,6 +52,10 @@ export class MarkdownIndex {
         ? (error as Partial<NodeJS.ErrnoException>)
         : undefined;
       if (errorWithCode?.code === "ENOSPC") {
+        if (this.watcherStopping) {
+          return;
+        }
+        this.watcherStopping = true;
         console.error("File watcher limit reached (ENOSPC). Continuing without live file watching.");
         void this.stop().catch((stopError) => console.error("Failed to stop watcher after ENOSPC:", stopError));
         return;
@@ -131,6 +137,7 @@ export class MarkdownIndex {
     }
     await this.watcher.close();
     this.watcher = undefined;
+    this.watcherStopping = false;
   }
 
   private isExcluded(filePath: string): boolean {
