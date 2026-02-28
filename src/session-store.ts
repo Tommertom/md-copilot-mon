@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { toBase64Id, extractFirstHeading } from "./util.js";
 
 export type SessionInfo = {
   id: string;
@@ -11,10 +12,6 @@ export type SessionInfo = {
 };
 
 export type SessionTodo = Record<string, unknown>;
-
-function toSessionId(dirPath: string): string {
-  return Buffer.from(dirPath, "utf8").toString("base64url");
-}
 
 function findSessionStateDir(filePath: string): string | undefined {
   const parts = filePath.split(path.sep);
@@ -100,13 +97,13 @@ export async function discoverSessions(
     let title = dirName;
     try {
       const mdFiles = (await fs.readdir(dir))
-        .filter((f) => f.toLowerCase().endsWith(".md"))
+        .filter((f: string) => f.toLowerCase().endsWith(".md"))
         .sort();
       if (mdFiles.length > 0) {
         const content = await fs.readFile(path.join(dir, mdFiles[0]), "utf8");
-        const [firstLine = ""] = content.split(/\r?\n/, 1);
-        if (firstLine.startsWith("# ")) {
-          title = firstLine.slice(2).trim();
+        const heading = extractFirstHeading(content);
+        if (heading) {
+          title = heading;
         }
       }
     } catch {
@@ -114,7 +111,7 @@ export async function discoverSessions(
     }
 
     sessions.push({
-      id: toSessionId(dir),
+      id: toBase64Id(dir),
       directory: dir,
       title,
       sqliteFile,

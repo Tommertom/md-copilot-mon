@@ -1,13 +1,17 @@
 import MarkdownIt from "markdown-it";
+import type Token from "markdown-it/lib/token.mjs";
+import type { Options } from "markdown-it";
+import type Renderer from "markdown-it/lib/renderer.mjs";
 import texmath from "markdown-it-texmath";
 import katex from "katex";
 import HTMLtoDOCX from "html-to-docx";
+import { extractFirstHeading } from "./util.js";
 
 const md = new MarkdownIt({ html: false, linkify: true, breaks: true })
   .use(texmath, { engine: katex, delimiters: "dollars" });
 
 const defaultFence = md.renderer.rules.fence;
-md.renderer.rules.fence = (tokens: any, idx: any, options: any, env: any, self: any) => {
+md.renderer.rules.fence = (tokens: Token[], idx: number, options: Options, env: unknown, self: Renderer): string => {
   const token = tokens[idx];
   const info = (token.info || "").trim();
   if (info === "mermaid") {
@@ -20,6 +24,10 @@ md.renderer.rules.fence = (tokens: any, idx: any, options: any, env: any, self: 
 };
 
 function extractTitle(markdown: string): string {
+  const heading = extractFirstHeading(markdown);
+  if (heading) {
+    return heading;
+  }
   const match = markdown.match(/^#\s+(.+)$/m);
   return match ? match[1].trim() : "Document";
 }

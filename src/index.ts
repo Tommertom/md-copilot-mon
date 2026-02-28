@@ -1,9 +1,9 @@
 import rateLimit from "express-rate-limit";
-import express, { type Response } from "express";
+import express, { type Request, type Response } from "express";
 import dotenv from "dotenv";
 import fsSync from "node:fs";
 import fs from "node:fs/promises";
-import { createServer } from "node:http";
+import { createServer, type Server } from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
@@ -120,6 +120,33 @@ const gitDiffRateLimiter = rateLimit({
 app.use(express.json({ limit: "5mb" }));
 app.use(express.static(webDir));
 
+function registerSseClient(clients: Set<Response>, _req: Request, res: Response): void {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders();
+  clients.add(res);
+  res.on("close", () => {
+    clients.delete(res);
+  });
+}
+
+function broadcastSse(clients: Set<Response>, data: string): void {
+  for (const client of clients) {
+    try {
+      client.write(`data: ${data}\n\n`);
+    } catch {
+      clients.delete(client);
+    }
+  }
+}
+
+async function resolveSession(sessionId: string): Promise<SessionInfo | undefined> {
+  const sessions = await getCachedSessions();
+  return sessions.find((s) => s.id === sessionId);
+}
+
 app.get("/api/files", (_req, res) => {
   res.json(index.list().slice(0, fileMaxLimit).map((entry) => ({
     ...entry,
@@ -225,34 +252,14 @@ app.put("/api/files/:id", saveRateLimiter, async (req, res) => {
   }
 });
 
-app.get("/api/changes", (_req, res) => {
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  res.setHeader("X-Accel-Buffering", "no");
-  res.flushHeaders();
-  changeClients.add(res);
-  res.on("close", () => {
-    changeClients.delete(res);
-  });
+app.get("/api/changes", (req, res) => {
+  registerSseClient(changeClients, req, res);
 });
 
 index.onChange(() => {
   sessionCache = null;
-  for (const client of changeClients) {
-    try {
-      client.write("data: changed\n\n");
-    } catch {
-      changeClients.delete(client);
-    }
-  }
-  for (const client of sessionChangeClients) {
-    try {
-      client.write("data: changed\n\n");
-    } catch {
-      sessionChangeClients.delete(client);
-    }
-  }
+  broadcastSse(changeClients, "changed");
+  broadcastSse(sessionChangeClients, "changed");
 });
 
 async function getCachedSessions(): Promise<SessionInfo[]> {
@@ -280,8 +287,7 @@ app.get("/api/sessions", async (_req, res) => {
 
 app.get("/api/sessions/:id", async (req, res) => {
   try {
-    const sessions = await getCachedSessions();
-    const session = sessions.find((s) => s.id === req.params.id);
+    const session = await resolveSession(req.params.id);
     if (!session) {
       res.status(404).json({ error: "Session not found" });
       return;
@@ -301,8 +307,7 @@ app.get("/api/sessions/:id", async (req, res) => {
 
 app.get("/api/sessions/:id/:table", async (req, res) => {
   try {
-    const sessions = await getCachedSessions();
-    const session = sessions.find((s) => s.id === req.params.id);
+    const session = await resolveSession(req.params.id);
     if (!session) {
       res.status(404).json({ error: "Session not found" });
       return;
@@ -318,36 +323,29 @@ app.get("/api/sessions/:id/:table", async (req, res) => {
   }
 });
 
-app.get("/api/session-changes", (_req, res) => {
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  res.setHeader("X-Accel-Buffering", "no");
-  res.flushHeaders();
-  sessionChangeClients.add(res);
-  res.on("close", () => {
-    sessionChangeClients.delete(res);
-  });
+app.get("/api/session-changes", (req, res) => {
+  registerSseClient(sessionChangeClients, req, res);
 });
 
 async function start(): Promise<void> {
   await index.start();
   let runningPort = port;
+  let httpServer: Server | undefined;
   try {
     while (true) {
-      const started = await new Promise<boolean>((resolve, reject) => {
+      const result = await new Promise<{ started: boolean; server: Server }>((resolve, reject) => {
         const server = createServer(app);
-        server.once("error", (error) => {
-          const startError = error as NodeJS.ErrnoException;
-          if (autoIncrementPort && startError.code === "EADDRINUSE") {
-            resolve(false);
+        server.once("error", (error: NodeJS.ErrnoException) => {
+          if (autoIncrementPort && error.code === "EADDRINUSE") {
+            resolve({ started: false, server });
             return;
           }
           reject(error);
         });
-        server.listen(runningPort, () => resolve(true));
+        server.listen(runningPort, () => resolve({ started: true, server }));
       });
-      if (started) {
+      if (result.started) {
+        httpServer = result.server;
         break;
       }
       if (runningPort >= 65_535) {
@@ -366,6 +364,16 @@ async function start(): Promise<void> {
     process.exit(1);
     return;
   }
+
+  const shutdown = async () => {
+    console.log("\nShutting down…");
+    httpServer?.close();
+    await index.stop();
+    process.exit(0);
+  };
+  process.once("SIGINT", () => void shutdown());
+  process.once("SIGTERM", () => void shutdown());
+
   if (autoIncrementPort && runningPort !== port) {
     console.log(`Requested port ${port} was in use, using port ${runningPort} instead.`);
   }

@@ -4,21 +4,10 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { FileEntry } from "./types.js";
-
-function toId(filePath: string): string {
-  return Buffer.from(filePath, "utf8").toString("base64url");
-}
+import { toBase64Id, extractFirstHeading } from "./util.js";
 
 function isMarkdown(filePath: string): boolean {
   return filePath.toLowerCase().endsWith(".md");
-}
-
-function extractTitle(markdown: string): string {
-  const [firstLine = ""] = markdown.split(/\r?\n/, 1);
-  if (!firstLine.startsWith("# ")) {
-    return "";
-  }
-  return firstLine.slice(2).trim();
 }
 
 export class MarkdownIndex {
@@ -122,9 +111,9 @@ export class MarkdownIndex {
         return false;
       }
       const markdown = await fs.readFile(filePath, "utf8");
-      const id = toId(filePath);
+      const id = toBase64Id(filePath);
       const previous = this.byPath.get(filePath);
-      const entry: FileEntry = { id, path: filePath, title: extractTitle(markdown), mtimeMs: stat.mtimeMs };
+      const entry: FileEntry = { id, path: filePath, title: extractFirstHeading(markdown), mtimeMs: stat.mtimeMs };
       this.byPath.set(filePath, entry);
       this.byId.set(id, filePath);
       return !previous || previous.mtimeMs !== entry.mtimeMs;
