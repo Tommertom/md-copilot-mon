@@ -16,7 +16,7 @@ export type SessionInfo = {
   id: string;
   directory: string;
   title: string;
-  sqliteFile: string;
+  sqliteFile?: string;
   tables: string[];
   workspace?: WorkspaceInfo;
 };
@@ -58,12 +58,16 @@ async function readWorkspaceYaml(dir: string): Promise<WorkspaceInfo | undefined
     const parsed = yaml.load(content);
     if (parsed && typeof parsed === "object" && "id" in parsed) {
       const obj = parsed as Record<string, unknown>;
+      const rawId = obj.id;
+      if (typeof rawId !== "string" || rawId.trim() === "") {
+        return undefined;
+      }
       const toISOString = (val: unknown): string => {
         if (val instanceof Date) return val.toISOString();
         return String(val ?? "");
       };
       return {
-        id: String(obj.id ?? ""),
+        id: rawId,
         cwd: String(obj.cwd ?? ""),
         summary: String(obj.summary ?? ""),
         summary_count: Number.isFinite(Number(obj.summary_count)) ? Number(obj.summary_count) : 0,
@@ -131,7 +135,7 @@ export async function discoverSessions(
       continue;
     }
     sqliteFiles.sort();
-    const sqliteFile = sqliteFiles.length > 0 ? sqliteFiles[0] : "";
+    const sqliteFile = sqliteFiles.length > 0 ? sqliteFiles[0] : undefined;
     const tables = sqliteFile ? readTables(sqliteFile) : [];
     const dirName = path.basename(dir);
 
@@ -168,6 +172,7 @@ export function getSessionTableData(
   sessionInfo: SessionInfo,
   tableName: string
 ): SessionTodo[] {
+  if (!sessionInfo.sqliteFile) return [];
   return readTableRows(sessionInfo.sqliteFile, tableName, sessionInfo.tables);
 }
 
@@ -175,6 +180,7 @@ export function getAllSessionData(
   sessionInfo: SessionInfo
 ): Record<string, SessionTodo[]> {
   const result: Record<string, SessionTodo[]> = {};
+  if (!sessionInfo.sqliteFile || sessionInfo.tables.length === 0) return result;
   let db: Database.Database | undefined;
   try {
     db = new Database(sessionInfo.sqliteFile, { readonly: true, fileMustExist: true });

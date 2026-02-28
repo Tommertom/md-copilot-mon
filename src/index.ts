@@ -336,7 +336,8 @@ app.get("/api/active-sessions", async (_req, res) => {
   try {
     const sessions = await getCachedSessions();
     const activeIds = sessions
-      .filter((s): s is SessionInfo & { workspace: WorkspaceInfo } => !!s.workspace)
+      .filter((s): s is SessionInfo & { workspace: WorkspaceInfo } =>
+        !!(s.workspace && typeof s.workspace.id === "string" && s.workspace.id.trim() !== ""))
       .map((s) => s.workspace.id);
     const uniqueIds = [...new Set(activeIds)];
     res.json({ sessions: uniqueIds });
