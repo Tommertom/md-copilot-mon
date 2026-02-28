@@ -21,10 +21,12 @@
           <button id="download-docx" disabled>Download as DOCX</button>
           <span id="current-file"></span>
         </div>
-        <textarea id="editor" aria-label="Markdown editor" placeholder="Select a markdown file to edit..." spellcheck="false" disabled></textarea>
-        <article id="preview"></article>
+        <article id="editor" contenteditable="false" aria-label="Markdown editor" spellcheck="true">
+          <p>Select a markdown file to edit...</p>
+        </article>
       </main>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/turndown@7.2.0/dist/turndown.min.js"></script>
     <script type="module" src="/app.js"></script>
     <script type="module">
       import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";

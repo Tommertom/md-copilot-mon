@@ -1,11 +1,29 @@
 const fileListEl = document.getElementById("file-list");
 const searchInputEl = document.getElementById("file-search");
-const previewEl = document.getElementById("preview");
 const editorEl = document.getElementById("editor");
 const currentFileEl = document.getElementById("current-file");
 const downloadMdBtn = document.getElementById("download-md");
 const downloadDocxBtn = document.getElementById("download-docx");
 const saveBtn = document.getElementById("save-file");
+
+const turndownService = new window.TurndownService({
+  headingStyle: "atx",
+  codeBlockStyle: "fenced"
+});
+
+turndownService.addRule("mermaid", {
+  filter(node) {
+    return node.classList && node.classList.contains("mermaid-wrapper");
+  },
+  replacement(_content, node) {
+    const sourceElement = node.querySelector(".mermaid-source");
+    if (!sourceElement) {
+      return "";
+    }
+    const source = sourceElement.textContent.trim();
+    return `\n\n\`\`\`mermaid\n${source}\n\`\`\`\n\n`;
+  }
+});
 
 let files = [];
 let selectedId = null;
@@ -14,11 +32,29 @@ let searchQuery = "";
 let initialized = false;
 let loadedMarkdown = "";
 let isSaving = false;
+let mermaidCounter = 0;
 const knownIds = new Set();
 const unreadIds = new Set();
 
+function normalizeMarkdown(markdown) {
+  return markdown.replace(/\r\n/g, "\n").trimEnd();
+}
+
+function getEditorMarkdown() {
+  return turndownService.turndown(editorEl.innerHTML);
+}
+
+function setEditorEnabled(enabled) {
+  editorEl.contentEditable = enabled ? "true" : "false";
+}
+
+function setEditorHtml(html) {
+  editorEl.innerHTML = html;
+}
+
 function updateSaveButtonState() {
-  saveBtn.disabled = isSaving || !selectedId || editorEl.value === loadedMarkdown;
+  const hasChanges = normalizeMarkdown(getEditorMarkdown()) !== normalizeMarkdown(loadedMarkdown);
+  saveBtn.disabled = isSaving || !selectedId || !hasChanges;
 }
 
 function renderList() {
@@ -52,6 +88,56 @@ function renderList() {
   }
 }
 
+async function renderMermaidInEditor() {
+  const mermaid = window.__mermaid;
+  if (!mermaid) {
+    return;
+  }
+
+  const sourceBlocks = editorEl.querySelectorAll("pre.mermaid");
+  for (const block of sourceBlocks) {
+    const source = block.textContent || "";
+    const wrapper = document.createElement("div");
+    wrapper.className = "mermaid-wrapper";
+    wrapper.setAttribute("contenteditable", "false");
+
+    const sourceElement = document.createElement("pre");
+    sourceElement.className = "mermaid-source";
+    sourceElement.textContent = source;
+
+    const diagramElement = document.createElement("div");
+    diagramElement.className = "mermaid-diagram";
+
+    wrapper.append(sourceElement, diagramElement);
+    block.replaceWith(wrapper);
+  }
+
+  mermaid.initialize({ startOnLoad: false });
+
+  const wrappers = editorEl.querySelectorAll(".mermaid-wrapper");
+  for (const wrapper of wrappers) {
+    const sourceElement = wrapper.querySelector(".mermaid-source");
+    const diagramElement = wrapper.querySelector(".mermaid-diagram");
+    if (!sourceElement || !diagramElement) {
+      continue;
+    }
+
+    const source = sourceElement.textContent.trim();
+    if (!source) {
+      continue;
+    }
+
+    try {
+      const id = `mermaid-${Date.now()}-${mermaidCounter++}`;
+      const { svg } = await mermaid.render(id, source);
+      diagramElement.innerHTML = svg;
+    } catch (error) {
+      console.error("Failed to render mermaid diagram", error);
+      diagramElement.textContent = "Failed to render mermaid diagram.";
+    }
+  }
+}
+
 async function refreshFiles() {
   const res = await fetch("/api/files");
   files = await res.json();
@@ -82,16 +168,16 @@ async function refreshFiles() {
   }
   renderList();
   if (selectedId) {
-    const hasUnsavedChanges = editorEl.value !== loadedMarkdown;
+    const hasUnsavedChanges = normalizeMarkdown(getEditorMarkdown()) !== normalizeMarkdown(loadedMarkdown);
     const shouldReloadFromServer = !hasUnsavedChanges || loadedId !== selectedId;
     if (shouldReloadFromServer) {
       await loadPreview(selectedId);
     }
   } else {
     loadedId = null;
-    previewEl.innerHTML = "<p>No markdown files found yet.</p>";
-    editorEl.value = "";
-    editorEl.disabled = true;
+    loadedMarkdown = "";
+    setEditorHtml("<p>No markdown files found yet.</p>");
+    setEditorEnabled(false);
     currentFileEl.textContent = "";
     downloadMdBtn.disabled = true;
     downloadDocxBtn.disabled = true;
@@ -102,7 +188,8 @@ async function refreshFiles() {
 async function loadPreview(id) {
   const res = await fetch(`/api/files/${encodeURIComponent(id)}`);
   if (!res.ok) {
-    previewEl.textContent = "Failed to load file.";
+    setEditorHtml("<p>Failed to load file.</p>");
+    setEditorEnabled(false);
     return;
   }
   const data = await res.json();
@@ -111,18 +198,13 @@ async function loadPreview(id) {
   unreadIds.delete(id);
   loadedMarkdown = data.markdown;
   renderList();
-  editorEl.value = data.markdown;
-  editorEl.disabled = false;
-  previewEl.innerHTML = data.html;
+  setEditorHtml(data.html);
+  setEditorEnabled(true);
+  await renderMermaidInEditor();
   currentFileEl.textContent = data.path;
   downloadMdBtn.disabled = false;
   downloadDocxBtn.disabled = false;
   updateSaveButtonState();
-  const mermaid = window.__mermaid;
-  if (mermaid) {
-    mermaid.initialize({ startOnLoad: false });
-    await mermaid.run({ nodes: previewEl.querySelectorAll(".mermaid") });
-  }
 }
 
 async function selectFile(id) {
@@ -134,7 +216,7 @@ downloadMdBtn.addEventListener("click", () => {
   const displayedPath = currentFileEl.textContent.trim();
   const baseName = displayedPath ? (displayedPath.split("/").pop() || "markdown.md") : "markdown.md";
   const fileName = baseName.toLowerCase().endsWith(".md") ? baseName : `${baseName}.md`;
-  const blob = new Blob([editorEl.value], { type: "text/markdown;charset=utf-8" });
+  const blob = new Blob([getEditorMarkdown()], { type: "text/markdown;charset=utf-8" });
   const downloadUrl = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = downloadUrl;
@@ -151,7 +233,7 @@ downloadDocxBtn.addEventListener("click", () => {
 saveBtn.addEventListener("click", async () => {
   if (!selectedId || isSaving) return;
   const savingId = selectedId;
-  const markdown = editorEl.value;
+  const markdown = getEditorMarkdown();
   const baseMarkdown = loadedMarkdown;
   isSaving = true;
   updateSaveButtonState();
@@ -172,15 +254,13 @@ saveBtn.addEventListener("click", async () => {
       }
       const reloadTheirs = window.confirm("This file was modified on disk. Click OK to load the server version (your edits will be lost), or Cancel to keep editing your current version.");
       if (reloadTheirs) {
-        if (typeof errorData.markdown !== "string") {
+        if (typeof errorData.markdown !== "string" || typeof errorData.html !== "string") {
           alert("Failed to reload latest file content.");
           return;
         }
         loadedMarkdown = errorData.markdown;
-        editorEl.value = errorData.markdown;
-        if (typeof errorData.html === "string") {
-          previewEl.innerHTML = errorData.html;
-        }
+        setEditorHtml(errorData.html);
+        await renderMermaidInEditor();
         await refreshFiles();
       }
       return;
@@ -193,9 +273,9 @@ saveBtn.addEventListener("click", async () => {
     }
     const data = await res.json();
     loadedMarkdown = data.markdown;
-    if (selectedId === savingId && editorEl.value === markdown) {
-      editorEl.value = data.markdown;
-      previewEl.innerHTML = data.html;
+    if (selectedId === savingId && normalizeMarkdown(getEditorMarkdown()) === normalizeMarkdown(markdown)) {
+      setEditorHtml(data.html);
+      await renderMermaidInEditor();
     }
     await refreshFiles();
   } finally {

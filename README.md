@@ -1,9 +1,8 @@
 # Markdown File Viewer for Copilot
+
 [![npm version](https://img.shields.io/npm/v/md-copilot-viewer?logo=npm)](https://www.npmjs.com/package/md-copilot-viewer)
 
-Simple markdown file viewer/editor for Copilot/session notes, with save and DOCX export.
-
-## Install from npm
+Simple markdown file viewer/editor for Copilot/session notes, with save and DOCX export.zInstall from npm
 
 ```bash
 npm i -g md-copilot-viewer
@@ -18,24 +17,20 @@ npx md-copilot-viewer
 
 ## Features
 
-- Realtime monitoring of `.md` files, so new and updated notes appear automatically.
-- Built-in markdown editor with save button for updating files directly from the UI.
-- Live markdown preview with a quick file list for fast context switching.
-- Automatically surfaces plans generated in Copilot plan mode.
-- Optional DOCX export for sharing notes outside the app.
+*   Realtime monitoring of `.md` files, so new and updated notes appear automatically.
+*   Built-in WYSIWYG markdown editor (single rendered pane) with save button for updating files directly from the UI.
+*   Quick file list for fast context switching while editing rendered markdown directly.
+*   Automatically surfaces plans generated in Copilot plan mode.
+*   Optional DOCX export for sharing notes outside the app.
 
 ## How it works
 
-1. A Node watcher tracks markdown file changes (create/update) in realtime.
-<<<<<<< copilot/implement-md-viewer-editor
-2. The backend serves a capped, recent file list plus rendered markdown content, and accepts file save requests.
-3. The web UI refreshes the list/preview automatically, lets you edit and save markdown, and supports DOCX export.
-=======
-2. The backend serves a capped, recent file list plus rendered markdown content.
-3. The backend pushes file-change events via SSE so the web UI refreshes list/preview automatically and supports DOCX export.
->>>>>>> main
+1.  A Node watcher tracks markdown file changes (create/update) in realtime.
+2.  The backend serves a capped, recent file list plus rendered markdown content.
+3.  The backend pushes file-change events via SSE so the web UI refreshes list/preview automatically and supports DOCX export.
 
 ## Screenshot
+
 ![Screenshot 1 - file list and markdown preview](https://raw.githubusercontent.com/Tommertom/md-copilot-mon/main/web/screenshots/screenshot-1.png)
 
 ## Run
@@ -48,8 +43,9 @@ npm run dev
 On first start, the app creates `.env-md-copilot-viewer` from `.env.template` if it does not exist.
 
 `npm run dev` uses `PORT` from `.env-md-copilot-viewer` (default `3000`), so open:
-- `http://localhost:3000` (default), or
-- `http://localhost:<your PORT value>`
+
+*   `http://localhost:3000` (default), or
+*   `http://localhost:<your PORT value>`
 
 ## `.env-md-copilot-viewer` config
 
@@ -62,27 +58,27 @@ EXCLUDE_PATTERN='"checkpoints/index.md"'
 FILE_MAX_LIMIT=200
 ```
 
-- `PORT`  
-  Port used by `npm run dev` and `npm start` (default `3000`).
-- `LOAD_EXISTING_MD`  
-  - `true`: load markdown files that already exist when the app starts.  
-  - `false`: only watch new markdown files created after startup.
-- `EXCLUDE_PATTERN`  
-  Comma-separated path substrings to ignore.  
-  Example: `"checkpoints/index.md","tmp/","node_modules/"`
-- `FILE_MAX_LIMIT`  
-  Maximum number of most recently updated markdown files returned to the frontend (default `200`).
+*   `PORT`  
+    Port used by `npm run dev` and `npm start` (default `3000`).
+*   `LOAD_EXISTING_MD`
+    *   `true`: load markdown files that already exist when the app starts.
+    *   `false`: only watch new markdown files created after startup.
+*   `EXCLUDE_PATTERN`  
+    Comma-separated path substrings to ignore.  
+    Example: `"checkpoints/index.md","tmp/","node_modules/"`
+*   `FILE_MAX_LIMIT`  
+    Maximum number of most recently updated markdown files returned to the frontend (default `200`).
 
 ## API endpoints
 
-- `GET /api/files`  
-  Returns recent markdown files (max `FILE_MAX_LIMIT`) with `id`, display `path`, `title`, and `mtimeMs`.  
-  `title` is the first line without `# ` when the first line starts with `# `; otherwise an empty string.
-- `GET /api/files/:id`  
-  Returns one file as `{ path, markdown, html }`.
-- `PUT /api/files/:id`  
-  Saves markdown content from `{ markdown, baseMarkdown? }` and returns `{ path, markdown, html }`. If `baseMarkdown` is provided and the file changed on disk meanwhile, returns `409` with latest `{ path, markdown, html }` so the UI can reload theirs or keep mine.
-- `GET /api/files/:id/docx`  
-  Downloads the selected markdown file as `.docx`.
-- `GET /api/changes`  
-  Server-Sent Events stream that notifies the web app when markdown files change.
+*   `GET /api/files`  
+    Returns recent markdown files (max `FILE_MAX_LIMIT`) with `id`, display `path`, `title`, and `mtimeMs`.  
+    `title` is the first line without `#` when the first line starts with `#` ; otherwise an empty string.
+*   `GET /api/files/:id`  
+    Returns one file as `{ path, markdown, html }`.
+*   `PUT /api/files/:id`  
+    Saves markdown content from `{ markdown, baseMarkdown? }` and returns `{ path, markdown, html }`. If `baseMarkdown` is provided and the file changed on disk meanwhile, returns `409` with latest `{ path, markdown, html }` so the UI can reload theirs or keep mine.
+*   `GET /api/files/:id/docx`  
+    Downloads the selected markdown file as `.docx`.
+*   `GET /api/changes`  
+    Server-Sent Events stream that notifies the web app when markdown files change.
