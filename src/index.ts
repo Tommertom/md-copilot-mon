@@ -125,6 +125,11 @@ app.get("/api/files", (_req, res) => {
 });
 
 app.get("/api/git-diff", gitDiffRateLimiter, async (_req, res) => {
+  // Prevent caching of potentially sensitive git diff data
+  res.set({
+    "Cache-Control": "no-store, no-cache, must-revalidate",
+    Pragma: "no-cache"
+  });
   try {
     const { stdout } = await execFileAsync("git", ["diff", "--no-color"], { cwd, maxBuffer: 5 * 1024 * 1024, encoding: "utf8" });
     res.json({ diff: stdout });
