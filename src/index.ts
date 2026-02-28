@@ -240,6 +240,9 @@ async function start(): Promise<void> {
       if (started) {
         break;
       }
+      if (runningPort >= 65_535) {
+        throw Object.assign(new Error(`No available port found between ${port} and 65535`), { code: "EADDRINUSE" });
+      }
       runningPort += 1;
     }
   } catch (error) {
@@ -252,6 +255,9 @@ async function start(): Promise<void> {
     }
     process.exit(1);
     return;
+  }
+  if (autoIncrementPort && runningPort !== port) {
+    console.log(`Requested port ${port} was in use, using port ${runningPort} instead.`);
   }
   console.log(`Server running on http://localhost:${runningPort}`);
   console.log(`Config loaded from ${envFilePath}`);
