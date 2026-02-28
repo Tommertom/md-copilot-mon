@@ -62,7 +62,13 @@ function readTableRows(
   let db: Database.Database | undefined;
   try {
     db = new Database(dbPath, { readonly: true, fileMustExist: true });
-    const safeName = tableName.replace(/[^A-Za-z0-9_]/g, "");
+    const knownTables = db
+      .prepare("SELECT name FROM sqlite_master WHERE type='table'")
+      .all() as { name: string }[];
+    if (!knownTables.some((t) => t.name === tableName)) {
+      return [];
+    }
+    const safeName = tableName.replace(/"/g, '""');
     return db.prepare(`SELECT * FROM "${safeName}"`).all() as SessionTodo[];
   } catch {
     return [];
