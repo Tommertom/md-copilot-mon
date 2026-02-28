@@ -131,7 +131,16 @@ async function selectFile(id) {
 
 downloadMdBtn.addEventListener("click", () => {
   if (!selectedId) return;
-  window.location.href = `/api/files/${encodeURIComponent(selectedId)}/md`;
+  const displayedPath = currentFileEl.textContent.trim();
+  const baseName = displayedPath ? (displayedPath.split("/").pop() || "markdown.md") : "markdown.md";
+  const fileName = baseName.toLowerCase().endsWith(".md") ? baseName : `${baseName}.md`;
+  const blob = new Blob([editorEl.value], { type: "text/markdown;charset=utf-8" });
+  const downloadUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = downloadUrl;
+  link.download = fileName;
+  link.click();
+  queueMicrotask(() => URL.revokeObjectURL(downloadUrl));
 });
 
 downloadBtn.addEventListener("click", () => {
