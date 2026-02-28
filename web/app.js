@@ -3,6 +3,7 @@ const searchInputEl = document.getElementById("file-search");
 const previewEl = document.getElementById("preview");
 const editorEl = document.getElementById("editor");
 const currentFileEl = document.getElementById("current-file");
+const downloadMdBtn = document.getElementById("download-md");
 const downloadBtn = document.getElementById("download-docx");
 const saveBtn = document.getElementById("save-file");
 
@@ -92,6 +93,7 @@ async function refreshFiles() {
     editorEl.value = "";
     editorEl.disabled = true;
     currentFileEl.textContent = "";
+    downloadMdBtn.disabled = true;
     downloadBtn.disabled = true;
     saveBtn.disabled = true;
   }
@@ -113,6 +115,7 @@ async function loadPreview(id) {
   editorEl.disabled = false;
   previewEl.innerHTML = data.html;
   currentFileEl.textContent = data.path;
+  downloadMdBtn.disabled = false;
   downloadBtn.disabled = false;
   updateSaveButtonState();
   const mermaid = window.__mermaid;
@@ -125,6 +128,11 @@ async function loadPreview(id) {
 async function selectFile(id) {
   await loadPreview(id);
 }
+
+downloadMdBtn.addEventListener("click", () => {
+  if (!selectedId) return;
+  window.location.href = `/api/files/${encodeURIComponent(selectedId)}/md`;
+});
 
 downloadBtn.addEventListener("click", () => {
   if (!selectedId) return;

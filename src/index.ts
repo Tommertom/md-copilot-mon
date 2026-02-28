@@ -137,6 +137,23 @@ app.get("/api/files/:id/docx", async (req, res) => {
   }
 });
 
+app.get("/api/files/:id/md", async (req, res) => {
+  const filePath = index.resolve(req.params.id);
+  if (!filePath) {
+    res.status(404).json({ error: "File not found" });
+    return;
+  }
+  try {
+    const markdown = await fs.readFile(filePath, "utf8");
+    const fileName = `${path.basename(filePath, ".md")}.md`;
+    res.setHeader("Content-Type", "text/markdown; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+    res.send(markdown);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
 app.put("/api/files/:id", saveRateLimiter, async (req, res) => {
   const filePath = index.resolve(req.params.id);
   if (!filePath) {
