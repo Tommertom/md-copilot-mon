@@ -249,7 +249,7 @@ async function start(): Promise<void> {
     await index.stop();
     const startError = error as NodeJS.ErrnoException;
     if (startError.code === "EADDRINUSE") {
-      console.error(`Port ${runningPort} is already in use. Shutting down gracefully.`);
+      console.error(startError.message);
     } else {
       console.error(`Failed to start server: ${startError.message}`);
     }
