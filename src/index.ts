@@ -10,6 +10,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { markdownToDocx, renderMarkdown } from "./markdown.js";
+import { discoverSessions, getAllSessionData, getSessionTableData } from "./session-store.js";
 import { defaultRoots, MarkdownIndex } from "./watcher.js";
 
 const ENV_FILE_NAME = ".env-md-copilot-viewer";
@@ -97,6 +98,7 @@ const roots = defaultRoots(cwd);
 const index = new MarkdownIndex(roots, loadExistingMd, excludePatterns);
 const execFileAsync = promisify(execFile);
 const changeClients = new Set<Response>();
+const sessionChangeClients = new Set<Response>();
 const currentFile = fileURLToPath(import.meta.url);
 const webDir = path.resolve(path.dirname(currentFile), "../web");
 const saveRateLimiter = rateLimit({
@@ -242,6 +244,84 @@ index.onChange(() => {
       changeClients.delete(client);
     }
   }
+  for (const client of sessionChangeClients) {
+    try {
+      client.write("data: changed\n\n");
+    } catch {
+      sessionChangeClients.delete(client);
+    }
+  }
+});
+
+app.get("/api/sessions", async (_req, res) => {
+  try {
+    const trackedPaths = index.paths();
+    const sessions = await discoverSessions(trackedPaths);
+    res.json(
+      sessions.map((s) => ({
+        id: s.id,
+        title: s.title,
+        directory: toDisplayPath(s.directory),
+        tables: s.tables
+      }))
+    );
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+app.get("/api/sessions/:id", async (req, res) => {
+  try {
+    const trackedPaths = index.paths();
+    const sessions = await discoverSessions(trackedPaths);
+    const session = sessions.find((s) => s.id === req.params.id);
+    if (!session) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
+    const data = getAllSessionData(session);
+    res.json({
+      id: session.id,
+      title: session.title,
+      directory: toDisplayPath(session.directory),
+      tables: session.tables,
+      data
+    });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+app.get("/api/sessions/:id/:table", async (req, res) => {
+  try {
+    const trackedPaths = index.paths();
+    const sessions = await discoverSessions(trackedPaths);
+    const session = sessions.find((s) => s.id === req.params.id);
+    if (!session) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
+    if (!session.tables.includes(req.params.table)) {
+      res.status(404).json({ error: "Table not found" });
+      return;
+    }
+    const rows = getSessionTableData(session, req.params.table);
+    res.json({ table: req.params.table, rows });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+app.get("/api/session-changes", (_req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders();
+  sessionChangeClients.add(res);
+  res.on("close", () => {
+    sessionChangeClients.delete(res);
+  });
 });
 
 async function start(): Promise<void> {

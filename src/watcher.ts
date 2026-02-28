@@ -147,6 +147,10 @@ export class MarkdownIndex {
     return [...this.byPath.values()].sort((a, b) => b.mtimeMs - a.mtimeMs);
   }
 
+  paths(): string[] {
+    return [...this.byPath.keys()];
+  }
+
   resolve(id: string): string | undefined {
     return this.byId.get(id);
   }
