@@ -63,8 +63,8 @@ FILE_MAX_LIMIT=20
 *   `PORT`  
     Port used by `npm run dev` and `npm start` (default `3011`).
 *   `AUTO_INCREMENT_PORT`
-    *   `true` (default): if `PORT` is already in use, increment until a free port is found.
-    *   `false`: fail startup when `PORT` is already in use.
+    *   `true` (default): if `PORT` is already in use, increment the port number until a free port is found or until reaching port `65535`. If no free port is available in that range, startup fails.
+    *   `false`: fail startup immediately when `PORT` is already in use (no auto-increment attempts).
 *   `LOAD_EXISTING_MD`
     *   `true`: load markdown files that already exist when the app starts.
     *   `false`: only watch new markdown files created after startup.
