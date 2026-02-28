@@ -14,6 +14,8 @@ const ENV_FILE_NAME = ".env-md-copilot-viewer";
 const ENV_TEMPLATE_NAME = ".env.template";
 const DEFAULT_ENV_TEMPLATE = `# Server port used by \`npm run dev\` / \`npm start\` (defaults to 3011)
 PORT=3011
+# true: if PORT is in use, keep incrementing until a free port is found
+AUTO_INCREMENT_PORT=true
 
 # true: include existing .md files at startup, false: only track newly created files after startup
 LOAD_EXISTING_MD=true
@@ -84,6 +86,7 @@ function toSafeAttachmentFileName(fileName: string): string {
 
 const app = express();
 const port = Number(process.env.PORT || 3011);
+const autoIncrementPort = process.env.AUTO_INCREMENT_PORT !== "false";
 const loadExistingMd = process.env.LOAD_EXISTING_MD !== "false";
 const excludePatterns = parseExcludePatterns(process.env.EXCLUDE_PATTERN);
 const fileMaxLimit = parseFileMaxLimit(process.env.FILE_MAX_LIMIT);
@@ -219,25 +222,40 @@ index.onChange(() => {
 
 async function start(): Promise<void> {
   await index.start();
+  let runningPort = port;
   try {
-    await new Promise<void>((resolve, reject) => {
-      const server = createServer(app);
-      server.once("error", reject);
-      server.listen(port, () => resolve());
-    });
+    while (true) {
+      const started = await new Promise<boolean>((resolve, reject) => {
+        const server = createServer(app);
+        server.once("error", (error) => {
+          const startError = error as NodeJS.ErrnoException;
+          if (autoIncrementPort && startError.code === "EADDRINUSE") {
+            resolve(false);
+            return;
+          }
+          reject(error);
+        });
+        server.listen(runningPort, () => resolve(true));
+      });
+      if (started) {
+        break;
+      }
+      runningPort += 1;
+    }
   } catch (error) {
     await index.stop();
     const startError = error as NodeJS.ErrnoException;
     if (startError.code === "EADDRINUSE") {
-      console.error(`Port ${port} is already in use. Shutting down gracefully.`);
+      console.error(`Port ${runningPort} is already in use. Shutting down gracefully.`);
     } else {
       console.error(`Failed to start server: ${startError.message}`);
     }
     process.exit(1);
     return;
   }
-  console.log(`Server running on http://localhost:${port}`);
+  console.log(`Server running on http://localhost:${runningPort}`);
   console.log(`Config loaded from ${envFilePath}`);
+  console.log(`AUTO_INCREMENT_PORT=${String(autoIncrementPort)}`);
   console.log(`LOAD_EXISTING_MD=${String(loadExistingMd)}`);
   console.log(`EXCLUDE_PATTERN=${excludePatterns.join(",") || "(none)"}`);
   console.log(`FILE_MAX_LIMIT=${String(fileMaxLimit)}`);

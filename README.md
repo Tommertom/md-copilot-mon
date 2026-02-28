@@ -54,6 +54,7 @@ On first start, the app creates `.env-md-copilot-viewer` from `.env.template` if
 
 ```env
 PORT=3011
+AUTO_INCREMENT_PORT=true
 LOAD_EXISTING_MD=true
 EXCLUDE_PATTERN='"checkpoints/index.md"'
 FILE_MAX_LIMIT=20
@@ -61,6 +62,9 @@ FILE_MAX_LIMIT=20
 
 *   `PORT`  
     Port used by `npm run dev` and `npm start` (default `3011`).
+*   `AUTO_INCREMENT_PORT`
+    *   `true` (default): if `PORT` is already in use, increment until a free port is found.
+    *   `false`: fail startup when `PORT` is already in use.
 *   `LOAD_EXISTING_MD`
     *   `true`: load markdown files that already exist when the app starts.
     *   `false`: only watch new markdown files created after startup.
