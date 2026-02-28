@@ -4,10 +4,10 @@ const outputEl = document.getElementById("diff-output");
 async function loadDiff() {
   try {
     const response = await fetch("/api/git-diff");
-    const data = await response.json();
     if (!response.ok) {
-      throw new Error(data.error || "Failed to load git diff");
+      throw new Error(`Failed to load git diff (HTTP ${response.status})`);
     }
+    const data = await response.json();
     if (!data.diff.trim()) {
       statusEl.textContent = "No local git diff changes found.";
       return;

@@ -242,7 +242,7 @@ downloadDocxBtn.addEventListener("click", () => {
 });
 
 openDiffViewerBtn.addEventListener("click", () => {
-  window.open("/diff/", "_blank", "noopener");
+  window.open("/diff/", "_blank", "noopener,noreferrer");
 });
 
 saveBtn.addEventListener("click", async () => {

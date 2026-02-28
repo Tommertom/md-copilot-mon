@@ -106,6 +106,13 @@ const saveRateLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: "Too many save requests, please retry shortly" }
 });
+const gitDiffRateLimiter = rateLimit({
+  windowMs: 10_000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many git diff requests, please retry shortly" }
+});
 
 app.use(express.json({ limit: "5mb" }));
 app.use(express.static(webDir));
@@ -117,7 +124,7 @@ app.get("/api/files", (_req, res) => {
   })));
 });
 
-app.get("/api/git-diff", async (_req, res) => {
+app.get("/api/git-diff", gitDiffRateLimiter, async (_req, res) => {
   try {
     const { stdout } = await execFileAsync("git", ["diff", "--no-color"], { cwd, maxBuffer: 5 * 1024 * 1024 });
     res.json({ diff: stdout });
