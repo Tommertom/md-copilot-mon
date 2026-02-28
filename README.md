@@ -32,7 +32,7 @@ npx md-copilot-viewer
 
 ## Screenshot
 
-![Screenshot 1 - file list and markdown preview](https://raw.githubusercontent.com/Tommertom/md-copilot-mon/main/web/screenshots/screenshot-1.png)
+![Screenshot 1 - file list and markdown preview](./web/screenshots/Screenshot-1.png)
 
 ## Run
 
