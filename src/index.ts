@@ -10,7 +10,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { markdownToDocx, renderMarkdown } from "./markdown.js";
-import { discoverSessions, getAllSessionData, getSessionTableData } from "./session-store.js";
+import { discoverSessions, getAllSessionData, getSessionTableData, type SessionInfo } from "./session-store.js";
 import { defaultRoots, MarkdownIndex } from "./watcher.js";
 
 const ENV_FILE_NAME = ".env-md-copilot-viewer";
@@ -99,6 +99,7 @@ const index = new MarkdownIndex(roots, loadExistingMd, excludePatterns);
 const execFileAsync = promisify(execFile);
 const changeClients = new Set<Response>();
 const sessionChangeClients = new Set<Response>();
+let sessionCache: SessionInfo[] | null = null;
 const currentFile = fileURLToPath(import.meta.url);
 const webDir = path.resolve(path.dirname(currentFile), "../web");
 const saveRateLimiter = rateLimit({
@@ -237,6 +238,7 @@ app.get("/api/changes", (_req, res) => {
 });
 
 index.onChange(() => {
+  sessionCache = null;
   for (const client of changeClients) {
     try {
       client.write("data: changed\n\n");
@@ -253,10 +255,16 @@ index.onChange(() => {
   }
 });
 
+async function getCachedSessions(): Promise<SessionInfo[]> {
+  if (!sessionCache) {
+    sessionCache = await discoverSessions(index.paths());
+  }
+  return sessionCache;
+}
+
 app.get("/api/sessions", async (_req, res) => {
   try {
-    const trackedPaths = index.paths();
-    const sessions = await discoverSessions(trackedPaths);
+    const sessions = await getCachedSessions();
     res.json(
       sessions.map((s) => ({
         id: s.id,
@@ -272,8 +280,7 @@ app.get("/api/sessions", async (_req, res) => {
 
 app.get("/api/sessions/:id", async (req, res) => {
   try {
-    const trackedPaths = index.paths();
-    const sessions = await discoverSessions(trackedPaths);
+    const sessions = await getCachedSessions();
     const session = sessions.find((s) => s.id === req.params.id);
     if (!session) {
       res.status(404).json({ error: "Session not found" });
@@ -294,8 +301,7 @@ app.get("/api/sessions/:id", async (req, res) => {
 
 app.get("/api/sessions/:id/:table", async (req, res) => {
   try {
-    const trackedPaths = index.paths();
-    const sessions = await discoverSessions(trackedPaths);
+    const sessions = await getCachedSessions();
     const session = sessions.find((s) => s.id === req.params.id);
     if (!session) {
       res.status(404).json({ error: "Session not found" });

@@ -22,7 +22,15 @@ function renderSessionList() {
     dirPath.textContent = session.directory;
     label.append(title, dirPath);
     li.appendChild(label);
+    li.setAttribute("tabindex", "0");
+    li.setAttribute("role", "button");
     li.addEventListener("click", () => selectSession(session.id));
+    li.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        selectSession(session.id);
+      }
+    });
     sessionListEl.appendChild(li);
   }
 }
@@ -78,7 +86,13 @@ function escapeHtml(text) {
 async function refreshSessions() {
   try {
     const res = await fetch("/api/sessions");
-    sessions = await res.json();
+    if (!res.ok) {
+      console.error("Failed to load sessions: HTTP", res.status);
+      sessions = [];
+    } else {
+      const data = await res.json();
+      sessions = Array.isArray(data) ? data : [];
+    }
   } catch (error) {
     console.error("Failed to load sessions:", error);
     sessions = [];

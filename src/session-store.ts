@@ -57,17 +57,15 @@ function readTables(dbPath: string): string[] {
 
 function readTableRows(
   dbPath: string,
-  tableName: string
+  tableName: string,
+  knownTables: string[]
 ): SessionTodo[] {
+  if (!knownTables.includes(tableName)) {
+    return [];
+  }
   let db: Database.Database | undefined;
   try {
     db = new Database(dbPath, { readonly: true, fileMustExist: true });
-    const knownTables = db
-      .prepare("SELECT name FROM sqlite_master WHERE type='table'")
-      .all() as { name: string }[];
-    if (!knownTables.some((t) => t.name === tableName)) {
-      return [];
-    }
     const safeName = tableName.replace(/"/g, '""');
     return db.prepare(`SELECT * FROM "${safeName}"`).all() as SessionTodo[];
   } catch {
@@ -94,15 +92,16 @@ export async function discoverSessions(
     if (sqliteFiles.length === 0) {
       continue;
     }
+    sqliteFiles.sort();
     const sqliteFile = sqliteFiles[0];
     const tables = readTables(sqliteFile);
     const dirName = path.basename(dir);
 
     let title = dirName;
     try {
-      const mdFiles = (await fs.readdir(dir)).filter((f) =>
-        f.toLowerCase().endsWith(".md")
-      );
+      const mdFiles = (await fs.readdir(dir))
+        .filter((f) => f.toLowerCase().endsWith(".md"))
+        .sort();
       if (mdFiles.length > 0) {
         const content = await fs.readFile(path.join(dir, mdFiles[0]), "utf8");
         const [firstLine = ""] = content.split(/\r?\n/, 1);
@@ -130,15 +129,30 @@ export function getSessionTableData(
   sessionInfo: SessionInfo,
   tableName: string
 ): SessionTodo[] {
-  return readTableRows(sessionInfo.sqliteFile, tableName);
+  return readTableRows(sessionInfo.sqliteFile, tableName, sessionInfo.tables);
 }
 
 export function getAllSessionData(
   sessionInfo: SessionInfo
 ): Record<string, SessionTodo[]> {
   const result: Record<string, SessionTodo[]> = {};
-  for (const table of sessionInfo.tables) {
-    result[table] = readTableRows(sessionInfo.sqliteFile, table);
+  let db: Database.Database | undefined;
+  try {
+    db = new Database(sessionInfo.sqliteFile, { readonly: true, fileMustExist: true });
+    for (const table of sessionInfo.tables) {
+      const safeName = table.replace(/"/g, '""');
+      try {
+        result[table] = db.prepare(`SELECT * FROM "${safeName}"`).all() as SessionTodo[];
+      } catch {
+        result[table] = [];
+      }
+    }
+  } catch {
+    for (const table of sessionInfo.tables) {
+      result[table] = [];
+    }
+  } finally {
+    db?.close();
   }
   return result;
 }
