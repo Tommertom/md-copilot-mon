@@ -126,7 +126,7 @@ app.get("/api/files", (_req, res) => {
 
 app.get("/api/git-diff", gitDiffRateLimiter, async (_req, res) => {
   try {
-    const { stdout } = await execFileAsync("git", ["diff", "--no-color"], { cwd, maxBuffer: 5 * 1024 * 1024 });
+    const { stdout } = await execFileAsync("git", ["diff", "--no-color"], { cwd, maxBuffer: 5 * 1024 * 1024, encoding: "utf8" });
     res.json({ diff: stdout });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
