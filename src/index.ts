@@ -10,7 +10,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { markdownToDocx, renderMarkdown } from "./markdown.js";
-import { discoverSessions, getAllSessionData, getSessionTableData, type SessionInfo } from "./session-store.js";
+import { discoverSessions, getAllSessionData, getSessionTableData, type SessionInfo, type WorkspaceInfo } from "./session-store.js";
 import { defaultRoots, MarkdownIndex } from "./watcher.js";
 
 const ENV_FILE_NAME = ".env-md-copilot-viewer";
@@ -270,7 +270,8 @@ app.get("/api/sessions", async (_req, res) => {
         id: s.id,
         title: s.title,
         directory: toDisplayPath(s.directory),
-        tables: s.tables
+        tables: s.tables,
+        workspace: s.workspace
       }))
     );
   } catch (error) {
@@ -292,6 +293,7 @@ app.get("/api/sessions/:id", async (req, res) => {
       title: session.title,
       directory: toDisplayPath(session.directory),
       tables: session.tables,
+      workspace: session.workspace,
       data
     });
   } catch (error) {
@@ -328,6 +330,19 @@ app.get("/api/session-changes", (_req, res) => {
   res.on("close", () => {
     sessionChangeClients.delete(res);
   });
+});
+
+app.get("/api/active-sessions", async (_req, res) => {
+  try {
+    const sessions = await getCachedSessions();
+    const activeIds = sessions
+      .filter((s): s is SessionInfo & { workspace: WorkspaceInfo } => !!s.workspace)
+      .map((s) => s.workspace.id);
+    const uniqueIds = [...new Set(activeIds)];
+    res.json({ sessions: uniqueIds });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
 });
 
 async function start(): Promise<void> {

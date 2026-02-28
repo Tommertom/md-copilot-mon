@@ -13,6 +13,10 @@ function isMarkdown(filePath: string): boolean {
   return filePath.toLowerCase().endsWith(".md");
 }
 
+function isWorkspaceYaml(filePath: string): boolean {
+  return path.basename(filePath) === "workspace.yml" && filePath.includes("session-state");
+}
+
 function extractTitle(markdown: string): string {
   const [firstLine = ""] = markdown.split(/\r?\n/, 1);
   if (!firstLine.startsWith("# ")) {
@@ -46,16 +50,28 @@ export class MarkdownIndex {
       awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 100 }
     });
     this.watcher.on("add", (filePath: string) => {
+      if (isWorkspaceYaml(filePath)) {
+        this.notifyChanged();
+        return;
+      }
       void this.upsert(filePath).then((changed) => {
         if (changed) this.notifyChanged();
       });
     });
     this.watcher.on("change", (filePath: string) => {
+      if (isWorkspaceYaml(filePath)) {
+        this.notifyChanged();
+        return;
+      }
       void this.upsert(filePath).then((changed) => {
         if (changed) this.notifyChanged();
       });
     });
     this.watcher.on("unlink", (filePath: string) => {
+      if (isWorkspaceYaml(filePath)) {
+        this.notifyChanged();
+        return;
+      }
       if (this.remove(filePath)) {
         this.notifyChanged();
       }
