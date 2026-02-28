@@ -15,14 +15,15 @@
         <ul id="file-list"></ul>
       </aside>
       <main class="content">
-        <div class="toolbar">
-          <span id="current-file"></span>
-          <div id="toolbar-actions">
-            <button id="save-file" disabled>Save</button>
-            <button id="download-md" disabled>Download as MD</button>
-            <button id="download-docx" disabled>Download as DOCX</button>
+          <div class="toolbar">
+            <span id="current-file"></span>
+            <div id="toolbar-actions">
+              <button id="open-diff-viewer">View Git Diff</button>
+              <button id="save-file" disabled>Save</button>
+              <button id="download-md" disabled>Download as MD</button>
+              <button id="download-docx" disabled>Download as DOCX</button>
+            </div>
           </div>
-        </div>
         <article id="editor" contenteditable="false" aria-label="Markdown editor" spellcheck="true">
           <p>Select a markdown file to edit...</p>
         </article>

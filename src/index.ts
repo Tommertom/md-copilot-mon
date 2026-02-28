@@ -6,6 +6,8 @@ import fs from "node:fs/promises";
 import { createServer } from "node:http";
 import os from "node:os";
 import path from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { markdownToDocx, renderMarkdown } from "./markdown.js";
 import { defaultRoots, MarkdownIndex } from "./watcher.js";
@@ -93,6 +95,7 @@ const fileMaxLimit = parseFileMaxLimit(process.env.FILE_MAX_LIMIT);
 const cwd = process.cwd();
 const roots = defaultRoots(cwd);
 const index = new MarkdownIndex(roots, loadExistingMd, excludePatterns);
+const execFileAsync = promisify(execFile);
 const changeClients = new Set<Response>();
 const currentFile = fileURLToPath(import.meta.url);
 const webDir = path.resolve(path.dirname(currentFile), "../web");
@@ -103,6 +106,13 @@ const saveRateLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: "Too many save requests, please retry shortly" }
 });
+const gitDiffRateLimiter = rateLimit({
+  windowMs: 10_000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many git diff requests, please retry shortly" }
+});
 
 app.use(express.json({ limit: "5mb" }));
 app.use(express.static(webDir));
@@ -112,6 +122,20 @@ app.get("/api/files", (_req, res) => {
     ...entry,
     path: toDisplayPath(entry.path)
   })));
+});
+
+app.get("/api/git-diff", gitDiffRateLimiter, async (_req, res) => {
+  // Prevent caching of potentially sensitive git diff data
+  res.set({
+    "Cache-Control": "no-store, no-cache, must-revalidate",
+    Pragma: "no-cache"
+  });
+  try {
+    const { stdout } = await execFileAsync("git", ["diff", "--no-color"], { cwd, maxBuffer: 5 * 1024 * 1024, encoding: "utf8" });
+    res.json({ diff: stdout });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
 });
 
 app.get("/api/files/:id", async (req, res) => {

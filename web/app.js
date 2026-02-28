@@ -4,6 +4,7 @@ const editorEl = document.getElementById("editor");
 const currentFileEl = document.getElementById("current-file");
 const downloadMdBtn = document.getElementById("download-md");
 const downloadDocxBtn = document.getElementById("download-docx");
+const openDiffViewerBtn = document.getElementById("open-diff-viewer");
 const saveBtn = document.getElementById("save-file");
 
 const turndownService = new window.TurndownService({
@@ -238,6 +239,10 @@ downloadMdBtn.addEventListener("click", () => {
 downloadDocxBtn.addEventListener("click", () => {
   if (!selectedId) return;
   window.location.href = `/api/files/${encodeURIComponent(selectedId)}/docx`;
+});
+
+openDiffViewerBtn.addEventListener("click", () => {
+  window.open("/diff/", "_blank", "noopener,noreferrer");
 });
 
 saveBtn.addEventListener("click", async () => {
