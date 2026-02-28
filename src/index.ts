@@ -76,6 +76,13 @@ function toDisplayPath(filePath: string): string {
   return filePath;
 }
 
+function toSafeAttachmentFileName(fileName: string): string {
+  const baseName = path.basename(fileName);
+  const extension = path.extname(baseName).replace(/[^A-Za-z0-9]/g, "");
+  const stem = path.basename(baseName, path.extname(baseName)).replace(/[^A-Za-z0-9_-]/g, "_");
+  return `${stem || "download"}${extension ? `.${extension}` : ""}`;
+}
+
 const app = express();
 const port = Number(process.env.PORT || 3000);
 const loadExistingMd = process.env.LOAD_EXISTING_MD !== "false";
@@ -128,7 +135,7 @@ app.get("/api/files/:id/docx", async (req, res) => {
   try {
     const markdown = await fs.readFile(filePath, "utf8");
     const buffer = await markdownToDocx(markdown);
-    const fileName = `${path.basename(filePath, ".md")}.docx`;
+    const fileName = toSafeAttachmentFileName(`${path.basename(filePath, ".md")}.docx`);
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
     res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
     res.send(buffer);
@@ -145,7 +152,7 @@ app.get("/api/files/:id/md", async (req, res) => {
   }
   try {
     const markdown = await fs.readFile(filePath, "utf8");
-    const fileName = `${path.basename(filePath, ".md")}.md`;
+    const fileName = toSafeAttachmentFileName(path.basename(filePath));
     res.setHeader("Content-Type", "text/markdown; charset=utf-8");
     res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
     res.send(markdown);
