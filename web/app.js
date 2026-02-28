@@ -4,7 +4,7 @@ const previewEl = document.getElementById("preview");
 const editorEl = document.getElementById("editor");
 const currentFileEl = document.getElementById("current-file");
 const downloadMdBtn = document.getElementById("download-md");
-const downloadBtn = document.getElementById("download-docx");
+const downloadDocxBtn = document.getElementById("download-docx");
 const saveBtn = document.getElementById("save-file");
 
 let files = [];
@@ -94,7 +94,7 @@ async function refreshFiles() {
     editorEl.disabled = true;
     currentFileEl.textContent = "";
     downloadMdBtn.disabled = true;
-    downloadBtn.disabled = true;
+    downloadDocxBtn.disabled = true;
     saveBtn.disabled = true;
   }
 }
@@ -116,7 +116,7 @@ async function loadPreview(id) {
   previewEl.innerHTML = data.html;
   currentFileEl.textContent = data.path;
   downloadMdBtn.disabled = false;
-  downloadBtn.disabled = false;
+  downloadDocxBtn.disabled = false;
   updateSaveButtonState();
   const mermaid = window.__mermaid;
   if (mermaid) {
@@ -143,7 +143,7 @@ downloadMdBtn.addEventListener("click", () => {
   queueMicrotask(() => URL.revokeObjectURL(downloadUrl));
 });
 
-downloadBtn.addEventListener("click", () => {
+downloadDocxBtn.addEventListener("click", () => {
   if (!selectedId) return;
   window.location.href = `/api/files/${encodeURIComponent(selectedId)}/docx`;
 });

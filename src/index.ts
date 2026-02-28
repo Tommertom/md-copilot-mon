@@ -1,4 +1,3 @@
-import express from "express";
 import rateLimit from "express-rate-limit";
 import express, { type Response } from "express";
 import dotenv from "dotenv";
@@ -193,6 +192,9 @@ app.put("/api/files/:id", saveRateLimiter, async (req, res) => {
   } catch (error) {
     console.error("Failed to save markdown file", error);
     res.status(500).json({ error: "Failed to save file" });
+  }
+});
+
 app.get("/api/changes", (_req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
