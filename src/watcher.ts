@@ -10,6 +10,12 @@ function isMarkdown(filePath: string): boolean {
   return filePath.toLowerCase().endsWith(".md");
 }
 
+function isWorkspaceYaml(filePath: string): boolean {
+  if (path.basename(filePath) !== "workspace.yml") return false;
+  const parts = filePath.split(path.sep);
+  return parts.includes("session-state");
+}
+
 export class MarkdownIndex {
   private readonly byPath = new Map<string, FileEntry>();
   private readonly byId = new Map<string, string>();
@@ -35,16 +41,28 @@ export class MarkdownIndex {
       awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 100 }
     });
     this.watcher.on("add", (filePath: string) => {
+      if (isWorkspaceYaml(filePath)) {
+        this.notifyChanged();
+        return;
+      }
       void this.upsert(filePath).then((changed) => {
         if (changed) this.notifyChanged();
       });
     });
     this.watcher.on("change", (filePath: string) => {
+      if (isWorkspaceYaml(filePath)) {
+        this.notifyChanged();
+        return;
+      }
       void this.upsert(filePath).then((changed) => {
         if (changed) this.notifyChanged();
       });
     });
     this.watcher.on("unlink", (filePath: string) => {
+      if (isWorkspaceYaml(filePath)) {
+        this.notifyChanged();
+        return;
+      }
       if (this.remove(filePath)) {
         this.notifyChanged();
       }
