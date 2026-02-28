@@ -1,6 +1,6 @@
 {
   "name": "md-copilot-viewer",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Watch markdown files and view them in a browser with DOCX export",
   "license": "MIT",
   "type": "module",
