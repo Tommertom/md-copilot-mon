@@ -19,7 +19,8 @@ npx md-copilot-viewer
 
 *   Realtime monitoring of `.md` files, so new and updated notes appear automatically.
 *   Built-in WYSIWYG markdown editor (single rendered pane) with save button for updating files directly from the UI.
-*   Quick file list for fast context switching while editing rendered markdown directly.
+*   `Ctrl+S` (`Cmd+S` on macOS) triggers the same save action as the **Save** button for the active file.
+*   Quick file list for fast context switching while editing rendered markdown directly, showing both detected title and file path.
 *   Automatically surfaces plans generated in Copilot plan mode.
 *   Optional DOCX export for sharing notes outside the app.
 
@@ -42,9 +43,9 @@ npm run dev
 
 On first start, the app creates `.env-md-copilot-viewer` from `.env.template` if it does not exist.
 
-`npm run dev` uses `PORT` from `.env-md-copilot-viewer` (default `3000`), so open:
+`npm run dev` uses `PORT` from `.env-md-copilot-viewer` (default `3011`), so open:
 
-*   `http://localhost:3000` (default), or
+*   `http://localhost:3011` (default), or
 *   `http://localhost:<your PORT value>`
 
 ## `.env-md-copilot-viewer` config
@@ -52,14 +53,14 @@ On first start, the app creates `.env-md-copilot-viewer` from `.env.template` if
 `.env.template` includes:
 
 ```env
-PORT=3000
+PORT=3011
 LOAD_EXISTING_MD=true
 EXCLUDE_PATTERN='"checkpoints/index.md"'
-FILE_MAX_LIMIT=200
+FILE_MAX_LIMIT=20
 ```
 
 *   `PORT`  
-    Port used by `npm run dev` and `npm start` (default `3000`).
+    Port used by `npm run dev` and `npm start` (default `3011`).
 *   `LOAD_EXISTING_MD`
     *   `true`: load markdown files that already exist when the app starts.
     *   `false`: only watch new markdown files created after startup.
@@ -67,7 +68,8 @@ FILE_MAX_LIMIT=200
     Comma-separated path substrings to ignore.  
     Example: `"checkpoints/index.md","tmp/","node_modules/"`
 *   `FILE_MAX_LIMIT`  
-    Maximum number of most recently updated markdown files returned to the frontend (default `200`).
+    Maximum number of most recently updated markdown files returned to the frontend (default `20`).
+    Keep this value modest to avoid unnecessary system load.
 
 ## API endpoints
 

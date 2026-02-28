@@ -52,6 +52,16 @@ function setEditorHtml(html) {
   editorEl.innerHTML = html;
 }
 
+function getSelectedFile() {
+  return files.find((file) => file.id === selectedId) ?? null;
+}
+
+function setCurrentFileLabel(displayPath) {
+  const selectedFile = getSelectedFile();
+  const title = selectedFile?.title?.trim() || "";
+  currentFileEl.textContent = title ? `${title} — ${displayPath}` : displayPath;
+}
+
 function updateSaveButtonState() {
   const hasChanges = normalizeMarkdown(getEditorMarkdown()) !== normalizeMarkdown(loadedMarkdown);
   saveBtn.disabled = isSaving || !selectedId || !hasChanges;
@@ -201,7 +211,7 @@ async function loadPreview(id) {
   setEditorHtml(data.html);
   setEditorEnabled(true);
   await renderMermaidInEditor();
-  currentFileEl.textContent = data.path;
+  setCurrentFileLabel(data.path);
   downloadMdBtn.disabled = false;
   downloadDocxBtn.disabled = false;
   updateSaveButtonState();
@@ -213,7 +223,7 @@ async function selectFile(id) {
 
 downloadMdBtn.addEventListener("click", () => {
   if (!selectedId) return;
-  const displayedPath = currentFileEl.textContent.trim();
+  const displayedPath = getSelectedFile()?.path || currentFileEl.textContent.trim();
   const baseName = displayedPath ? (displayedPath.split("/").pop() || "markdown.md") : "markdown.md";
   const fileName = baseName.toLowerCase().endsWith(".md") ? baseName : `${baseName}.md`;
   const blob = new Blob([getEditorMarkdown()], { type: "text/markdown;charset=utf-8" });
@@ -291,6 +301,16 @@ editorEl.addEventListener("input", () => {
 searchInputEl.addEventListener("input", (event) => {
   searchQuery = event.target.value;
   renderList();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "s") {
+    return;
+  }
+  event.preventDefault();
+  if (!saveBtn.disabled) {
+    saveBtn.click();
+  }
 });
 
 refreshFiles();

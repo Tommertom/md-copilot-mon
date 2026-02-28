@@ -12,8 +12,8 @@ import { defaultRoots, MarkdownIndex } from "./watcher.js";
 
 const ENV_FILE_NAME = ".env-md-copilot-viewer";
 const ENV_TEMPLATE_NAME = ".env.template";
-const DEFAULT_ENV_TEMPLATE = `# Server port used by \`npm run dev\` / \`npm start\` (defaults to 3000)
-PORT=3000
+const DEFAULT_ENV_TEMPLATE = `# Server port used by \`npm run dev\` / \`npm start\` (defaults to 3011)
+PORT=3011
 
 # true: include existing .md files at startup, false: only track newly created files after startup
 LOAD_EXISTING_MD=true
@@ -23,7 +23,7 @@ LOAD_EXISTING_MD=true
 EXCLUDE_PATTERN='"checkpoints/index.md"'
 
 # Maximum number of most recently updated files sent to the frontend
-FILE_MAX_LIMIT=200
+FILE_MAX_LIMIT=20
 `;
 
 function ensureEnvFile(): string {
@@ -59,7 +59,7 @@ function parseExcludePatterns(rawValue: string | undefined): string[] {
 function parseFileMaxLimit(rawValue: string | undefined): number {
   const parsed = Number(rawValue);
   if (!Number.isFinite(parsed) || parsed < 1) {
-    return 200;
+    return 20;
   }
   return Math.floor(parsed);
 }
@@ -83,7 +83,7 @@ function toSafeAttachmentFileName(fileName: string): string {
 }
 
 const app = express();
-const port = Number(process.env.PORT || 3000);
+const port = Number(process.env.PORT || 3011);
 const loadExistingMd = process.env.LOAD_EXISTING_MD !== "false";
 const excludePatterns = parseExcludePatterns(process.env.EXCLUDE_PATTERN);
 const fileMaxLimit = parseFileMaxLimit(process.env.FILE_MAX_LIMIT);
