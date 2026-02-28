@@ -3,7 +3,8 @@ const searchInputEl = document.getElementById("file-search");
 const previewEl = document.getElementById("preview");
 const editorEl = document.getElementById("editor");
 const currentFileEl = document.getElementById("current-file");
-const downloadBtn = document.getElementById("download-docx");
+const downloadMdBtn = document.getElementById("download-md");
+const downloadDocxBtn = document.getElementById("download-docx");
 const saveBtn = document.getElementById("save-file");
 
 let files = [];
@@ -92,7 +93,8 @@ async function refreshFiles() {
     editorEl.value = "";
     editorEl.disabled = true;
     currentFileEl.textContent = "";
-    downloadBtn.disabled = true;
+    downloadMdBtn.disabled = true;
+    downloadDocxBtn.disabled = true;
     saveBtn.disabled = true;
   }
 }
@@ -113,7 +115,8 @@ async function loadPreview(id) {
   editorEl.disabled = false;
   previewEl.innerHTML = data.html;
   currentFileEl.textContent = data.path;
-  downloadBtn.disabled = false;
+  downloadMdBtn.disabled = false;
+  downloadDocxBtn.disabled = false;
   updateSaveButtonState();
   const mermaid = window.__mermaid;
   if (mermaid) {
@@ -126,7 +129,21 @@ async function selectFile(id) {
   await loadPreview(id);
 }
 
-downloadBtn.addEventListener("click", () => {
+downloadMdBtn.addEventListener("click", () => {
+  if (!selectedId) return;
+  const displayedPath = currentFileEl.textContent.trim();
+  const baseName = displayedPath ? (displayedPath.split("/").pop() || "markdown.md") : "markdown.md";
+  const fileName = baseName.toLowerCase().endsWith(".md") ? baseName : `${baseName}.md`;
+  const blob = new Blob([editorEl.value], { type: "text/markdown;charset=utf-8" });
+  const downloadUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = downloadUrl;
+  link.download = fileName;
+  link.click();
+  queueMicrotask(() => URL.revokeObjectURL(downloadUrl));
+});
+
+downloadDocxBtn.addEventListener("click", () => {
   if (!selectedId) return;
   window.location.href = `/api/files/${encodeURIComponent(selectedId)}/docx`;
 });

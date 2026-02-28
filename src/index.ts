@@ -1,4 +1,3 @@
-import express from "express";
 import rateLimit from "express-rate-limit";
 import express, { type Response } from "express";
 import dotenv from "dotenv";
@@ -76,6 +75,13 @@ function toDisplayPath(filePath: string): string {
   return filePath;
 }
 
+function toSafeAttachmentFileName(fileName: string): string {
+  const baseName = path.basename(fileName);
+  const extension = path.extname(baseName).replace(/[^A-Za-z0-9]/g, "");
+  const stem = path.basename(baseName, path.extname(baseName)).replace(/[^A-Za-z0-9_-]/g, "_");
+  return `${stem || "download"}${extension ? `.${extension}` : ""}`;
+}
+
 const app = express();
 const port = Number(process.env.PORT || 3000);
 const loadExistingMd = process.env.LOAD_EXISTING_MD !== "false";
@@ -128,10 +134,27 @@ app.get("/api/files/:id/docx", async (req, res) => {
   try {
     const markdown = await fs.readFile(filePath, "utf8");
     const buffer = await markdownToDocx(markdown);
-    const fileName = `${path.basename(filePath, ".md")}.docx`;
+    const fileName = toSafeAttachmentFileName(`${path.basename(filePath, ".md")}.docx`);
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
     res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
     res.send(buffer);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+app.get("/api/files/:id/md", async (req, res) => {
+  const filePath = index.resolve(req.params.id);
+  if (!filePath) {
+    res.status(404).json({ error: "File not found" });
+    return;
+  }
+  try {
+    const markdown = await fs.readFile(filePath, "utf8");
+    const fileName = toSafeAttachmentFileName(path.basename(filePath));
+    res.setHeader("Content-Type", "text/markdown; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+    res.send(markdown);
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
@@ -169,6 +192,9 @@ app.put("/api/files/:id", saveRateLimiter, async (req, res) => {
   } catch (error) {
     console.error("Failed to save markdown file", error);
     res.status(500).json({ error: "Failed to save file" });
+  }
+});
+
 app.get("/api/changes", (_req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
