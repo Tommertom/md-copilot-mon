@@ -14,7 +14,9 @@ function isMarkdown(filePath: string): boolean {
 }
 
 function isWorkspaceYaml(filePath: string): boolean {
-  return path.basename(filePath) === "workspace.yml" && filePath.includes("session-state");
+  if (path.basename(filePath) !== "workspace.yml") return false;
+  const parts = filePath.split(path.sep);
+  return parts.includes("session-state");
 }
 
 function extractTitle(markdown: string): string {

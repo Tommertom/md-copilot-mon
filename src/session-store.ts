@@ -66,7 +66,7 @@ async function readWorkspaceYaml(dir: string): Promise<WorkspaceInfo | undefined
         id: String(obj.id ?? ""),
         cwd: String(obj.cwd ?? ""),
         summary: String(obj.summary ?? ""),
-        summary_count: Number(obj.summary_count ?? 0),
+        summary_count: Number.isFinite(Number(obj.summary_count)) ? Number(obj.summary_count) : 0,
         created_at: toISOString(obj.created_at),
         updated_at: toISOString(obj.updated_at),
       };
