@@ -97,7 +97,7 @@ export async function discoverSessions(
     let title = dirName;
     try {
       const mdFiles = (await fs.readdir(dir))
-        .filter((f: string) => f.toLowerCase().endsWith(".md"))
+        .filter((f) => f.toLowerCase().endsWith(".md"))
         .sort();
       if (mdFiles.length > 0) {
         const content = await fs.readFile(path.join(dir, mdFiles[0]), "utf8");
