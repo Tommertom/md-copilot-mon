@@ -1,0 +1,20 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f7f7f9;
+}
+
+main {
+  padding: 1rem;
+}
+
+h1 {
+  margin-top: 0;
+}
+
+#status {
+  padding: 0.75rem;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
