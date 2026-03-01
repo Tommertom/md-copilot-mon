@@ -231,7 +231,7 @@ copyMdBtn.addEventListener("click", async () => {
     await navigator.clipboard.writeText(getEditorMarkdown());
   } catch (error) {
     console.error("Failed to copy markdown to clipboard", error);
-    alert("Failed to copy markdown to clipboard.");
+    alert("Failed to copy markdown to clipboard. Check browser clipboard permissions and try again.");
   }
 });
 
@@ -254,7 +254,7 @@ pasteMdBtn.addEventListener("click", async () => {
     updateSaveButtonState();
   } catch (error) {
     console.error("Failed to paste markdown from clipboard", error);
-    alert("Failed to paste markdown from clipboard.");
+    alert("Failed to paste markdown from clipboard. Check clipboard permissions and verify clipboard text content.");
   }
 });
 
