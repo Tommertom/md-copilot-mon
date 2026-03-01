@@ -377,7 +377,7 @@ function connectSessionChangeEvents() {
   };
   events.onerror = () => {
     events.close();
-    if (reconnectTimer) return;
+    if (reconnectTimer !== null) return;
     reconnectTimer = setTimeout(() => {
       reconnectTimer = null;
       connectSessionChangeEvents();
