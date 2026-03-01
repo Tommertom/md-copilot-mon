@@ -22,6 +22,7 @@ npx md-copilot-viewer
 *   `Ctrl+S` (`Cmd+S` on macOS) triggers the same save action as the **Save** button for the active file.
 *   Quick file list for fast context switching while editing rendered markdown directly, showing both detected title and file path.
 *   Automatically surfaces plans generated in Copilot plan mode.
+*   Copy rendered editor content as raw markdown to the clipboard, and paste markdown from the clipboard back into the editor.
 *   Optional DOCX export for sharing notes outside the app.
 
 ## How it works
