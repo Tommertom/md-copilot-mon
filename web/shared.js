@@ -96,14 +96,22 @@ export function initAppMenu() {
   // Normalise current path to always have a trailing slash.
   const currentPath = window.location.pathname.replace(/\/$/, "") + "/";
 
-  // Always show a dedicated "md mon" entry that navigates to the main app.
+  const popupFeatures =
+    "popup=yes,menubar=no,toolbar=no,location=no,locationbar=no,status=no,scrollbars=yes,resizable=yes,width=1200,height=800,noopener,noreferrer";
+
+  function openInNewWindow(path) {
+    const win = window.open(path, "_blank", popupFeatures);
+    win?.focus();
+  }
+
+  // Always show a dedicated "md mon" entry that opens the main app in a new window.
   const homeBtn = document.createElement("button");
   homeBtn.type = "button";
   homeBtn.className = "menu-item";
   homeBtn.textContent = "md mon";
   homeBtn.addEventListener("click", () => {
     setAppMenuOpen(false);
-    window.location.href = "/";
+    openInNewWindow("/");
   });
   appMenuEl.appendChild(homeBtn);
 
@@ -119,7 +127,7 @@ export function initAppMenu() {
     } else {
       btn.addEventListener("click", () => {
         setAppMenuOpen(false);
-        window.location.href = app.path;
+        openInNewWindow(app.path);
       });
     }
     appMenuEl.appendChild(btn);
