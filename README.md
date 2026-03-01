@@ -3,6 +3,8 @@
 
 Agent operations viewer for Copilot sessions: monitor agent progress, internal state, and actions in realtime while editing session markdown, tracking diffs/todos/events, and organizing your vibe engineering setup across multiple windows.
 
+Each component is its own window, so you can organise your workspace as you like - for example, you could keep the markdown viewer and events log on a secondary monitor while you focus on the agent todos and diffs on your main screen.
+
 Install from npm
 
 ```bash
@@ -37,10 +39,12 @@ On first start, the app creates `.env-md-copilot-viewer` from `.env.template` if
 2.  The backend serves a capped, recent file list plus rendered markdown content.
 3.  The backend pushes file-change events via SSE so the web UI refreshes list/preview automatically and supports DOCX export.
 4.  The main web UI provides a markdown editor with save button that sends updates back to the backend, which writes to disk and triggers file-change events for live refresh.
-5.  THere are also dedicated mini-app views for Git Diff, Todos, Events, Session Files, Session Research, and Session Checkpoints that fetch data from the backend on demand. The Events viewer caches loaded sessions/events in-browser and only refetches when **Refresh** is clicked.
+5.  There are also dedicated mini-app views for Git Diff, Todos, Events, Session Files, Session Research, and Session Checkpoints that fetch data from the backend on demand. The Events viewer caches loaded sessions/events in-browser and only refetches when **Refresh** is clicked.
 
-## Screenshot - Agent HQ
+## Screenshot - Agent HQ example
 ![Screenshot 1 - Agent HQ](./screenshots/md-copilot-viewer.png)
+
+This is an example - you can organise the windows of the various apps as you like as they are browser windows. 
 
 Setup for web app development:
 
@@ -52,6 +56,7 @@ Setup for web app development:
 *   **Pink** - Event log
 
 Other menu items not shown: session files, session research, checkpoints, and popout (undocks the markdown viewer into a separate window).
+
 
 
 ## Screenshot - Agent HQ - MD viewer only
