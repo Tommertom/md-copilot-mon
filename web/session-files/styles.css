@@ -1,0 +1,31 @@
+* { box-sizing: border-box; }
+body { margin: 0; height: 100vh; overflow: hidden; font-family: Arial, sans-serif; color: #1a1a1a; background: #fff; }
+.app { display: grid; grid-template-columns: 320px 1fr; height: 100vh; overflow: hidden; }
+.sidebar { border-right: 1px solid #ddd; padding: 12px; min-height: 0; overflow: auto; }
+.sidebar h2 { margin: 0 0 12px; font-size: 18px; }
+#session-list { list-style: none; padding: 0; margin: 0; }
+#session-list li { display: flex; align-items: flex-start; gap: 8px; padding: 8px; border-radius: 6px; cursor: pointer; margin-bottom: 4px; }
+#session-list li:hover, #session-list li.active { background: #eef4ff; }
+.session-item-label { overflow-wrap: anywhere; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.session-item-title { font-size: 14px; font-weight: 600; }
+.session-item-path { font-size: 12px; color: #666; }
+.content { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.toolbar { display: flex; align-items: center; gap: 12px; padding: 12px; border-bottom: 1px solid #ddd; }
+#toolbar-actions { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+#current-session { flex: 1; min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
+#refresh-session-files {
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+#refresh-session-files:hover { background: #f1f3f4; }
+#data-view { flex: 1; min-height: 0; padding: 20px; overflow: auto; }
+.placeholder { color: #888; font-style: italic; }
+.data-table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.data-table th { background: #f5f7fa; text-align: left; padding: 10px 12px; border-bottom: 2px solid #ddd; font-weight: 600; position: sticky; top: 0; }
+.data-table td { padding: 8px 12px; border-bottom: 1px solid #eee; vertical-align: top; max-width: 480px; overflow-wrap: anywhere; }
+.data-table tr:hover { background: #f9fbff; }
+.download-link { color: #0066cc; text-decoration: none; }
+.download-link:hover { text-decoration: underline; }

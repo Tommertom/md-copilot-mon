@@ -3,32 +3,29 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Copilot Todos Monitor</title>
+    <title>Copilot Session Research</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
-    <link rel="stylesheet" href="/todos/styles.css" />
+    <link rel="stylesheet" href="/session-research/styles.css" />
   </head>
   <body>
     <div class="app">
       <aside class="sidebar">
-        <h2>Todos</h2>
+        <h2>Session research</h2>
         <ul id="session-list"></ul>
       </aside>
       <main class="content">
         <div class="toolbar">
-          <span id="current-session">Select a todo session to view its data</span>
+          <span id="current-session">Select a session to view research</span>
           <div id="toolbar-actions">
-            <select id="table-select" disabled>
-              <option value="">Select table</option>
-            </select>
-            <button id="refresh-todos" type="button">Refresh</button>
+            <button id="refresh-session-research" type="button">Refresh</button>
           </div>
         </div>
         <div id="data-view">
-          <p class="placeholder">Select a todo session from the sidebar to inspect its internal state.</p>
+          <p class="placeholder">Select a session from the sidebar to inspect research files.</p>
         </div>
       </main>
     </div>
-    <script type="module" src="/todos/app.js"></script>
+    <script type="module" src="/session-research/app.js"></script>
   </body>
 </html>

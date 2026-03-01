@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Copilot Session Checkpoints</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="stylesheet" href="/session-checkpoints/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <h2>Session checkpoints</h2>
+        <ul id="session-list"></ul>
+      </aside>
+      <main class="content">
+        <div class="toolbar">
+          <span id="current-session">Select a session to view checkpoints</span>
+          <div id="toolbar-actions">
+            <button id="refresh-session-checkpoints" type="button">Refresh</button>
+          </div>
+        </div>
+        <div class="data-panel">
+          <div id="data-view">
+            <p class="placeholder">Select a session from the sidebar to inspect checkpoint files.</p>
+          </div>
+          <section class="json-panel">
+            <h3 id="current-checkpoint">Select a checkpoint JSON file to view</h3>
+            <pre id="json-view"></pre>
+          </section>
+        </div>
+      </main>
+    </div>
+    <script type="module" src="/session-checkpoints/app.js"></script>
+  </body>
+</html>

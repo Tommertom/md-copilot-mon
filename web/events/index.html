@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Copilot Events Monitor</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="stylesheet" href="/events/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <h2>Events</h2>
+        <ul id="session-list"></ul>
+      </aside>
+      <main class="content">
+        <div class="toolbar">
+          <div class="toolbar-main">
+            <span id="current-session">Select a session to view events</span>
+            <div id="view-tabs" class="view-tabs" hidden>
+              <button id="tab-rendered" class="view-tab active" type="button">Rendered</button>
+              <button id="tab-raw" class="view-tab" type="button">Raw</button>
+            </div>
+          </div>
+          <div id="toolbar-actions">
+            <button id="toggle-sort" type="button">Sort: Desc</button>
+            <button id="refresh-events" type="button">Refresh</button>
+          </div>
+        </div>
+        <div id="data-view">
+          <p class="placeholder">Select a session from the sidebar to inspect events.</p>
+        </div>
+      </main>
+    </div>
+    <script type="module" src="/events/app.js"></script>
+  </body>
+</html>
