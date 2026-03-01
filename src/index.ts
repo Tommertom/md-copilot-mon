@@ -691,7 +691,12 @@ app.get("/api/active-sessions", async (_req, res) => {
 });
 
 async function start(): Promise<void> {
-  await index.start();
+  try {
+    await index.start();
+  } catch (error) {
+    console.error(`Failed to start file watcher: ${(error as Error).message}`);
+    process.exit(1);
+  }
   let runningPort = port;
   let server!: ReturnType<typeof createServer>;
   try {
