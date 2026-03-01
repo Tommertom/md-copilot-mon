@@ -239,8 +239,9 @@ pasteMdBtn.addEventListener("click", async () => {
   if (!selectedId) return;
   try {
     const markdown = await navigator.clipboard.readText();
+    const normalizedMarkdown = markdown.replace(/\r\n?/g, "\n");
     const escapeContainer = document.createElement("div");
-    escapeContainer.textContent = markdown;
+    escapeContainer.textContent = normalizedMarkdown;
     setEditorHtml(
       escapeContainer.innerHTML.replaceAll("\n", "<br>")
     );
