@@ -76,3 +76,4 @@
 
 .data-table td { padding: 8px 12px; border-bottom: 1px solid #eee; vertical-align: top; max-width: 400px; overflow-wrap: break-word; }
 .json-cell { white-space: pre-wrap; margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px; }
+.raw-toolbar { display: flex; justify-content: flex-end; padding: 6px 8px; }

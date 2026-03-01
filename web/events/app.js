@@ -133,23 +133,37 @@ function toTimelineEntry(event, toolNamesByCallId) {
   }
 
   if (type === "assistant.message") {
-    const requestedTools = Array.isArray(data.toolRequests)
-      ? data.toolRequests.map((tool) => tool?.name).filter(Boolean)
-      : [];
-    if (requestedTools.length > 0) {
+    const toolRequests = Array.isArray(data.toolRequests) ? data.toolRequests : [];
+    const reasoningText =
+      typeof data.reasoningText === "string" && data.reasoningText.trim()
+        ? data.reasoningText
+        : null;
+    if (toolRequests.length > 0) {
+      const toolLines = toolRequests.map((tool) => {
+        if (!tool) return "(unknown tool)";
+        const args = tool.arguments ?? {};
+        const lines = [`• ${tool.name || "unknown"}`];
+        // Show the most useful argument fields: command, description, query, path, pattern, prompt, input
+        const argKeys = ["command", "description", "query", "path", "pattern", "prompt", "input"];
+        for (const key of argKeys) {
+          if (typeof args[key] === "string" && args[key].trim()) {
+            lines.push(`  ${key}: ${args[key].trim()}`);
+          }
+        }
+        return lines.join("\n");
+      });
+      const detail = [toolLines.join("\n\n"), reasoningText].filter(Boolean).join("\n\n---\n");
       return {
         type,
         time,
         title: "Assistant planned tool calls",
-        detail: requestedTools.join(", "),
+        detail,
       };
     }
     const content =
       typeof data.content === "string" && data.content.trim()
         ? data.content
-        : typeof data.reasoningText === "string" && data.reasoningText.trim()
-          ? data.reasoningText
-          : "(empty assistant content)";
+        : reasoningText ?? "(empty assistant content)";
     return {
       type,
       time,
@@ -194,6 +208,17 @@ function toTimelineEntry(event, toolNamesByCallId) {
       time,
       title: `Tool completed: ${toolName}`,
       detail,
+    };
+  }
+
+  if (type === "session.task_complete") {
+    return {
+      type,
+      time,
+      title: "Task complete",
+      detail: typeof data.summary === "string" && data.summary.trim()
+        ? data.summary
+        : "(no summary)",
     };
   }
 
@@ -270,7 +295,12 @@ function renderRawEvents(events) {
   if (!Array.isArray(events) || events.length === 0) {
     return `<p class="placeholder">No events found for this session.</p>`;
   }
-  return `<pre class="json-cell">${escapeHtml(JSON.stringify(events, null, 2))}</pre>`;
+  const json = JSON.stringify(events, null, 2);
+  return `
+    <div class="raw-toolbar">
+      <button id="copy-raw-btn" type="button" class="icon-button" aria-label="Copy raw JSON to clipboard">Copy</button>
+    </div>
+    <pre class="json-cell" data-raw-json>${escapeHtml(json)}</pre>`;
 }
 
 function getDisplayedEvents(events) {
@@ -394,6 +424,19 @@ tabRenderedEl.addEventListener("click", () => {
 
 tabRawEl.addEventListener("click", () => {
   setActiveView("raw");
+});
+
+timelineContainerEl.addEventListener("click", (event) => {
+  if (event.target.id === "copy-raw-btn") {
+    const pre = timelineContainerEl.querySelector("[data-raw-json]");
+    if (!pre) return;
+    void navigator.clipboard.writeText(pre.textContent).then(() => {
+      const btn = event.target;
+      const original = btn.textContent;
+      btn.textContent = "Copied!";
+      setTimeout(() => { btn.textContent = original; }, 1500);
+    });
+  }
 });
 
 refreshEventsBtn.addEventListener("click", () => {
