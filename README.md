@@ -15,6 +15,9 @@ Or run without installing globally:
 npx md-copilot-viewer
 ```
 
+On first start, the app creates `.env-md-copilot-viewer` from `.env.template` if it does not exist.
+
+
 ## Features
 
 *   Realtime monitoring of `.md` files, so new and updated notes appear automatically.
@@ -33,26 +36,27 @@ npx md-copilot-viewer
 2.  The backend serves a capped, recent file list plus rendered markdown content.
 3.  The backend pushes file-change events via SSE so the web UI refreshes list/preview automatically and supports DOCX export.
 
-## Screenshot
+## Screenshot - Agent HQ
+![Screenshot 1 - Agent HQ](./screenshots/md-copilot-viewer.png)
 
-![Screenshot 1 - file list and markdown preview](./web/screenshots/Screenshot-1.png)
+Setup for web app development:
 
-## Run
+*   **Green** - md viewer and web app preview
+*   **Yellow** - menu for mini-apps (diff, events, files, research, popout)
+*   **Orange** - three agents
+*   **Blue** - Git diffs per session
+*   **Purple** - agent todos
+*   **Pink** - Event log
 
-```bash
-npm install
-npm run dev
-```
 
-On first start, the app creates `.env-md-copilot-viewer` from `.env.template` if it does not exist.
 
-`npm run dev` uses `PORT` from `.env-md-copilot-viewer` (default `3011`), so open:
+## Screenshot - Agent HQ - MD viewer only
+![Screenshot 2 - MD viewer only](./screenshots/Screenshot-1.png)
 
-*   `http://localhost:3011` (default), or
-*   `http://localhost:<your PORT value>`
+## Exposed apps and subapps
+The main app is the markdown file viewer/editor at `http://localhost:<port>/`.
 
 Extra subapps:
-
 *   `http://localhost:<port>/diff/` for git diff rendering
 *   `http://localhost:<port>/todos/` for session todo tables
 *   `http://localhost:<port>/events/` for session `events.jsonl` inspection
