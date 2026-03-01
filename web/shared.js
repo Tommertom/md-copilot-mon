@@ -65,18 +65,19 @@ export function renderSessionList(sessionListEl, sessions, selectedSessionId, on
 
 /**
  * Initialises the 6-dot app navigation menu for sub-apps.
- * Builds menu items for all apps; the item matching the current page is replaced
- * with a "md mon" link that navigates back to the main app ("/").
+ * Builds menu items for all apps; also adds a dedicated "md mon" entry that
+ * navigates back to the main app ("/"), and disables the item matching the
+ * current page.
  * Safe to call multiple times; re-entrant calls are ignored.
  */
 let appMenuInitialized = false;
 export function initAppMenu() {
   if (appMenuInitialized) return;
-  appMenuInitialized = true;
   const appMenuButton = document.getElementById("app-menu-button");
   const appMenuEl = document.getElementById("app-menu");
   const appMenuContainer = appMenuButton?.closest(".app-menu");
   if (!appMenuButton || !appMenuEl) return;
+  appMenuInitialized = true;
 
   function setAppMenuOpen(isOpen) {
     appMenuEl.hidden = !isOpen;
@@ -99,7 +100,6 @@ export function initAppMenu() {
   const homeBtn = document.createElement("button");
   homeBtn.type = "button";
   homeBtn.className = "menu-item";
-  homeBtn.setAttribute("role", "menuitem");
   homeBtn.textContent = "md mon";
   homeBtn.addEventListener("click", () => {
     setAppMenuOpen(false);
@@ -111,7 +111,6 @@ export function initAppMenu() {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "menu-item";
-    btn.setAttribute("role", "menuitem");
     btn.textContent = app.label;
     const isCurrent = currentPath === app.path;
     if (isCurrent) {
