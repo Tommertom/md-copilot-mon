@@ -1,3 +1,5 @@
+import { initResizer } from "/resizer.js";
+
 const sessionListEl = document.getElementById("session-list");
 const currentSessionEl = document.getElementById("current-session");
 const currentSessionFolderEl = document.getElementById("current-session-folder");
@@ -210,3 +212,5 @@ function connectSessionChangeEvents() {
 }
 
 connectSessionChangeEvents();
+
+initResizer();

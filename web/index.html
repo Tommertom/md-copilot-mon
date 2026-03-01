@@ -14,7 +14,7 @@
   </head>
   <body>
     <div class="app">
-      <aside class="sidebar">
+      <aside class="sidebar" id="sidebar">
         <h2>Markdown files</h2>
         <input
           id="file-search"
@@ -24,6 +24,14 @@
         />
         <ul id="file-list"></ul>
       </aside>
+      <div
+        class="resizer"
+        id="sidebar-resizer"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize sidebar"
+        tabindex="0"
+      ></div>
       <main class="content">
         <div class="toolbar">
           <span id="current-file"></span>

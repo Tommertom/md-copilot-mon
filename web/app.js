@@ -1,3 +1,5 @@
+import { initResizer } from "/resizer.js";
+
 const fileListEl = document.getElementById("file-list");
 const searchInputEl = document.getElementById("file-search");
 const editorEl = document.getElementById("editor");
@@ -517,3 +519,5 @@ function connectChangeEvents() {
 }
 
 connectChangeEvents();
+
+initResizer();
