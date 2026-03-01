@@ -40,31 +40,43 @@ function formatTimestamp(value) {
 
 function getSummaryStats(events) {
   const totalEvents = events.length;
-  const userMessages = events.filter((event) => event?.type === "user.message").length;
-  const assistantTurns = events.filter((event) => event?.type === "assistant.turn_start").length;
-  const toolStarts = events.filter((event) => event?.type === "tool.execution_start");
-  const toolCompletions = events.filter((event) => event?.type === "tool.execution_complete");
-  const toolFailures = toolCompletions.filter((event) => event?.data?.success === false).length;
+  const userMessages = events.filter(
+    (event) => event?.type === "user.message",
+  ).length;
+  const assistantTurns = events.filter(
+    (event) => event?.type === "assistant.turn_start",
+  ).length;
+  const toolStarts = events.filter(
+    (event) => event?.type === "tool.execution_start",
+  );
+  const toolCompletions = events.filter(
+    (event) => event?.type === "tool.execution_complete",
+  );
+  const toolFailures = toolCompletions.filter(
+    (event) => event?.data?.success === false,
+  ).length;
 
   const toolUsage = new Map();
   for (const event of toolStarts) {
     const toolName = event?.data?.toolName || "unknown";
     toolUsage.set(toolName, (toolUsage.get(toolName) || 0) + 1);
   }
-  const topTools = [...toolUsage.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([name, count]) => `${name} (${count})`)
-    .join(", ") || "None";
+  const topTools =
+    [...toolUsage.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([name, count]) => `${name} (${count})`)
+      .join(", ") || "None";
 
   const eventTimes = events
     .map((event) => new Date(event?.timestamp || "").getTime())
     .filter((time) => Number.isFinite(time));
   const firstTime = eventTimes.length > 0 ? Math.min(...eventTimes) : NaN;
   const lastTime = eventTimes.length > 0 ? Math.max(...eventTimes) : NaN;
-  const durationSeconds = Number.isFinite(firstTime) && Number.isFinite(lastTime)
-    ? Math.max(0, Math.round((lastTime - firstTime) / 1000))
-    : null;
+  const durationSeconds =
+    Number.isFinite(firstTime) && Number.isFinite(lastTime)
+      ? Math.max(0, Math.round((lastTime - firstTime) / 1000))
+      : null;
 
   return {
     totalEvents,
@@ -73,7 +85,7 @@ function getSummaryStats(events) {
     toolCalls: toolStarts.length,
     toolFailures,
     topTools,
-    durationSeconds
+    durationSeconds,
   };
 }
 
@@ -88,7 +100,7 @@ function toTimelineEntry(event, toolNamesByCallId) {
       data.copilotVersion ? `Copilot: ${data.copilotVersion}` : "",
       context.repository ? `Repository: ${context.repository}` : "",
       context.branch ? `Branch: ${context.branch}` : "",
-      context.cwd ? `CWD: ${context.cwd}` : ""
+      context.cwd ? `CWD: ${context.cwd}` : "",
     ].filter(Boolean);
     return { type, time, title: "Session started", detail: lines.join("\n") };
   }
@@ -98,16 +110,26 @@ function toTimelineEntry(event, toolNamesByCallId) {
       type,
       time,
       title: "User message",
-      detail: data.content || "(no content)"
+      detail: data.content || "(no content)",
     };
   }
 
   if (type === "assistant.turn_start") {
-    return { type, time, title: "Assistant turn started", detail: `Turn ${data.turnId || "?"}` };
+    return {
+      type,
+      time,
+      title: "Assistant turn started",
+      detail: `Turn ${data.turnId || "?"}`,
+    };
   }
 
   if (type === "assistant.turn_end") {
-    return { type, time, title: "Assistant turn finished", detail: `Turn ${data.turnId || "?"}` };
+    return {
+      type,
+      time,
+      title: "Assistant turn finished",
+      detail: `Turn ${data.turnId || "?"}`,
+    };
   }
 
   if (type === "assistant.message") {
@@ -119,50 +141,59 @@ function toTimelineEntry(event, toolNamesByCallId) {
         type,
         time,
         title: "Assistant planned tool calls",
-        detail: requestedTools.join(", ")
+        detail: requestedTools.join(", "),
       };
     }
-    const content = typeof data.content === "string" && data.content.trim()
-      ? data.content
-      : "(empty assistant content)";
+    const content =
+      typeof data.content === "string" && data.content.trim()
+        ? data.content
+        : typeof data.reasoningText === "string" && data.reasoningText.trim()
+          ? data.reasoningText
+          : "(empty assistant content)";
     return {
       type,
       time,
       title: "Assistant message",
-      detail: content
+      detail: content,
     };
   }
 
   if (type === "tool.execution_start") {
-    if (data.toolCallId) {
-      toolNamesByCallId.set(data.toolCallId, data.toolName || "unknown");
-    }
     return {
       type,
       time,
       title: `Tool started: ${data.toolName || "unknown"}`,
-      detail: data.arguments !== undefined
-        ? `Arguments: ${previewJson(data.arguments, 300)}`
-        : ""
+      detail:
+        data.arguments !== undefined
+          ? `Arguments: ${previewJson(data.arguments, 300)}`
+          : "",
     };
   }
 
   if (type === "tool.execution_complete") {
-    const toolName = data.toolName || toolNamesByCallId.get(data.toolCallId) || "unknown";
-    const status = data.success === false ? "failed" : "succeeded";
-    let detail = `Result: ${status}`;
+    const toolName =
+      data.toolName || toolNamesByCallId.get(data.toolCallId) || "unknown";
+    let detail = data.success === false ? "Tool failed" : "";
     if (data.error?.message) {
       detail += `\nError: ${data.error.message}`;
-    } else if (data.result?.content) {
-      detail += `\nOutput: ${data.result.content}`;
-    } else if (data.result?.detailedContent) {
-      detail += `\nOutput: ${data.result.detailedContent}`;
+    }
+    if (toolName === "report_intent") {
+      if (data.result?.detailedContent) {
+        detail += `\n${data.result.detailedContent}`;
+      }
+    } else {
+      if (data.result?.content) {
+        detail += `\n${data.result.content}`;
+      }
+      if (data.result?.detailedContent) {
+        detail += `\n${data.result.detailedContent}`;
+      }
     }
     return {
       type,
       time,
       title: `Tool completed: ${toolName}`,
-      detail
+      detail,
     };
   }
 
@@ -170,7 +201,7 @@ function toTimelineEntry(event, toolNamesByCallId) {
     type,
     time,
     title: type,
-    detail: previewJson(data, 300)
+    detail: previewJson(data, 300),
   };
 }
 
@@ -194,9 +225,26 @@ function renderTimeline(events) {
     return `<p class="placeholder">No events found for this session.</p>`;
   }
   const toolNamesByCallId = new Map();
+  for (const event of events) {
+    if (event?.type === "tool.execution_start" && event?.data?.toolCallId) {
+      toolNamesByCallId.set(
+        event.data.toolCallId,
+        event.data.toolName || "unknown",
+      );
+    }
+  }
   const timeline = events
     .map((event) => toTimelineEntry(event, toolNamesByCallId))
-    .map((entry) => `
+    .map((entry) => {
+      if (
+        entry.type === "assistant.turn_start" ||
+        entry.type === "assistant.turn_end" ||
+        entry.type === "tool.execution_start" ||
+        entry.type === "session.start"
+      ) {
+        return `<div class="timeline-divider"><span>${escapeHtml(entry.time)}${entry.time ? " · " : ""}${escapeHtml(entry.type)}</span></div>`;
+      }
+      return `
       <article class="timeline-item">
         <div class="timeline-head">
           <div class="timeline-title">${escapeHtml(entry.title)}</div>
@@ -204,7 +252,8 @@ function renderTimeline(events) {
         </div>
         <div class="timeline-detail">${escapeHtml(entry.detail || "")}</div>
       </article>
-    `)
+    `;
+    })
     .join("");
   return `<section class="timeline">${timeline}</section>`;
 }
@@ -212,7 +261,9 @@ function renderTimeline(events) {
 function getFilteredEvents(events) {
   if (!searchQuery) return events;
   const q = searchQuery.toLowerCase();
-  return events.filter((event) => JSON.stringify(event).toLowerCase().includes(q));
+  return events.filter((event) =>
+    JSON.stringify(event).toLowerCase().includes(q),
+  );
 }
 
 function renderRawEvents(events) {
@@ -238,7 +289,8 @@ function getDisplayedEvents(events) {
 }
 
 function updateSortToggle() {
-  toggleSortBtn.textContent = sortDirection === "desc" ? "Sort: Desc" : "Sort: Asc";
+  toggleSortBtn.textContent =
+    sortDirection === "desc" ? "Sort: Desc" : "Sort: Asc";
 }
 
 function setActiveView(view) {
@@ -251,9 +303,12 @@ function setActiveView(view) {
     searchBarContainerEl.hidden = true;
     timelineContainerEl.innerHTML = renderRawEvents(displayedEvents);
   } else {
-    statsContainerEl.innerHTML = displayedEvents.length > 0 ? renderStats(displayedEvents) : "";
+    statsContainerEl.innerHTML =
+      displayedEvents.length > 0 ? renderStats(displayedEvents) : "";
     searchBarContainerEl.hidden = false;
-    timelineContainerEl.innerHTML = renderTimeline(getFilteredEvents(displayedEvents));
+    timelineContainerEl.innerHTML = renderTimeline(
+      getFilteredEvents(displayedEvents),
+    );
   }
 }
 
@@ -261,13 +316,16 @@ async function loadEvents(sessionId, { force = false } = {}) {
   if (!force && sessionEventsCache.has(sessionId)) {
     loadedEvents = sessionEventsCache.get(sessionId) || [];
     const session = sessions.find((s) => s.id === sessionId);
-    currentSessionEl.textContent = session?.title || session?.directory || "Session";
+    currentSessionEl.textContent =
+      session?.title || session?.directory || "Session";
     viewTabsEl.hidden = false;
     setActiveView(selectedView);
     return;
   }
   try {
-    const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/events`);
+    const res = await fetch(
+      `/api/sessions/${encodeURIComponent(sessionId)}/events`,
+    );
     if (!res.ok) {
       statsContainerEl.innerHTML = "";
       searchBarContainerEl.hidden = true;
@@ -278,7 +336,8 @@ async function loadEvents(sessionId, { force = false } = {}) {
     loadedEvents = Array.isArray(events) ? events : [];
     sessionEventsCache.set(sessionId, loadedEvents);
     const session = sessions.find((s) => s.id === sessionId);
-    currentSessionEl.textContent = session?.title || session?.directory || "Session";
+    currentSessionEl.textContent =
+      session?.title || session?.directory || "Session";
     viewTabsEl.hidden = false;
     setActiveView(selectedView);
   } catch (error) {
@@ -350,7 +409,9 @@ toggleSortBtn.addEventListener("click", () => {
 eventSearchEl.addEventListener("input", () => {
   searchQuery = eventSearchEl.value;
   if (selectedView === "rendered") {
-    timelineContainerEl.innerHTML = renderTimeline(getFilteredEvents(getDisplayedEvents(loadedEvents)));
+    timelineContainerEl.innerHTML = renderTimeline(
+      getFilteredEvents(getDisplayedEvents(loadedEvents)),
+    );
   }
 });
 
