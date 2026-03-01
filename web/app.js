@@ -235,7 +235,6 @@ copyMdBtn.addEventListener("click", async () => {
   }
 });
 
-pasteMdBtn.addEventListener("click", async () => {
 /**
  * Render markdown into HTML suitable for the editor.
  * Prefers a real markdown parser if available; otherwise falls back
