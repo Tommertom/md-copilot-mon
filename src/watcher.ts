@@ -18,6 +18,13 @@ function isWorkspaceYaml(filePath: string): boolean {
   return parts.includes("session-state");
 }
 
+/** Returns true if dirPath is a direct session directory: .../.copilot/session-state/<id> */
+function isDirectSessionDir(dirPath: string): boolean {
+  const parts = dirPath.split(path.sep);
+  const idx = parts.indexOf("session-state");
+  return idx > 0 && parts[idx - 1] === ".copilot" && idx + 2 === parts.length;
+}
+
 function findWorkspaceDirForMarkdown(filePath: string): string | undefined {
   const parts = filePath.split(path.sep);
   const sessionStateIndex = parts.indexOf("session-state");
@@ -65,6 +72,7 @@ export class MarkdownIndex {
   private readonly byPath = new Map<string, FileEntry>();
   private readonly byId = new Map<string, string>();
   private readonly changeListeners = new Set<() => void>();
+  private readonly sessionDirs = new Set<string>();
   private watcher?: FSWatcher;
   private watcherStopping = false;
 
@@ -112,6 +120,12 @@ export class MarkdownIndex {
         this.notifyChanged();
       }
     });
+    this.watcher.on("addDir", (dirPath: string) => {
+      if (isDirectSessionDir(dirPath)) {
+        this.sessionDirs.add(dirPath);
+        this.notifyChanged();
+      }
+    });
     this.watcher.on("error", (error: unknown) => {
       const errorWithCode = typeof error === "object" && error !== null
         ? (error as Partial<NodeJS.ErrnoException>)
@@ -151,6 +165,9 @@ export class MarkdownIndex {
       if (entry.isDirectory()) {
         if (entry.name === "node_modules" || entry.name === ".git") {
           return;
+        }
+        if (isDirectSessionDir(fullPath)) {
+          this.sessionDirs.add(fullPath);
         }
         await this.walk(fullPath);
         return;
@@ -208,6 +225,10 @@ export class MarkdownIndex {
     return this.byId.get(id);
   }
 
+  sessionDirectories(): string[] {
+    return [...this.sessionDirs];
+  }
+
   onChange(listener: () => void): () => void {
     this.changeListeners.add(listener);
     return () => {
@@ -241,5 +262,5 @@ export class MarkdownIndex {
 }
 
 export function defaultRoots(cwd: string): string[] {
-  return [cwd, path.join(os.homedir(), ".copilot")];
+  return [cwd, path.join(os.homedir(), ".copilot", "session-state")];
 }

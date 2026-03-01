@@ -2,18 +2,22 @@ import { initResizer } from "/resizer.js";
 import { escapeHtml, renderSessionList, connectSessionChangeEvents } from "/shared.js";
 
 const sessionListEl = document.getElementById("session-list");
-const dataViewEl = document.getElementById("data-view");
 const currentSessionEl = document.getElementById("current-session");
 const refreshEventsBtn = document.getElementById("refresh-events");
 const toggleSortBtn = document.getElementById("toggle-sort");
 const viewTabsEl = document.getElementById("view-tabs");
 const tabRenderedEl = document.getElementById("tab-rendered");
 const tabRawEl = document.getElementById("tab-raw");
+const statsContainerEl = document.getElementById("stats-container");
+const searchBarContainerEl = document.getElementById("search-bar-container");
+const eventSearchEl = document.getElementById("event-search");
+const timelineContainerEl = document.getElementById("timeline-container");
 
 let sessions = [];
 let selectedSessionId = null;
 let selectedView = "rendered";
 let sortDirection = "desc";
+let searchQuery = "";
 let loadedEvents = [];
 const sessionEventsCache = new Map();
 
@@ -170,13 +174,9 @@ function toTimelineEntry(event, toolNamesByCallId) {
   };
 }
 
-function renderRenderedEvents(events) {
-  if (!Array.isArray(events) || events.length === 0) {
-    return `<p class="placeholder">No events found for this session.</p>`;
-  }
-
+function renderStats(events) {
   const stats = getSummaryStats(events);
-  const summaryHtml = `
+  return `
     <div class="summary-grid">
       <div class="summary-card"><div class="summary-label">Total events</div><div class="summary-value">${stats.totalEvents}</div></div>
       <div class="summary-card"><div class="summary-label">User messages</div><div class="summary-value">${stats.userMessages}</div></div>
@@ -187,7 +187,12 @@ function renderRenderedEvents(events) {
       <div class="summary-card"><div class="summary-label">Top tools</div><div class="summary-value">${escapeHtml(stats.topTools)}</div></div>
     </div>
   `;
+}
 
+function renderTimeline(events) {
+  if (!Array.isArray(events) || events.length === 0) {
+    return `<p class="placeholder">No events found for this session.</p>`;
+  }
   const toolNamesByCallId = new Map();
   const timeline = events
     .map((event) => toTimelineEntry(event, toolNamesByCallId))
@@ -201,8 +206,13 @@ function renderRenderedEvents(events) {
       </article>
     `)
     .join("");
+  return `<section class="timeline">${timeline}</section>`;
+}
 
-  return `${summaryHtml}<section class="timeline">${timeline}</section>`;
+function getFilteredEvents(events) {
+  if (!searchQuery) return events;
+  const q = searchQuery.toLowerCase();
+  return events.filter((event) => JSON.stringify(event).toLowerCase().includes(q));
 }
 
 function renderRawEvents(events) {
@@ -236,9 +246,15 @@ function setActiveView(view) {
   tabRenderedEl.classList.toggle("active", view === "rendered");
   tabRawEl.classList.toggle("active", view === "raw");
   const displayedEvents = getDisplayedEvents(loadedEvents);
-  dataViewEl.innerHTML = view === "raw"
-    ? renderRawEvents(displayedEvents)
-    : renderRenderedEvents(displayedEvents);
+  if (view === "raw") {
+    statsContainerEl.innerHTML = "";
+    searchBarContainerEl.hidden = true;
+    timelineContainerEl.innerHTML = renderRawEvents(displayedEvents);
+  } else {
+    statsContainerEl.innerHTML = displayedEvents.length > 0 ? renderStats(displayedEvents) : "";
+    searchBarContainerEl.hidden = false;
+    timelineContainerEl.innerHTML = renderTimeline(getFilteredEvents(displayedEvents));
+  }
 }
 
 async function loadEvents(sessionId, { force = false } = {}) {
@@ -253,7 +269,9 @@ async function loadEvents(sessionId, { force = false } = {}) {
   try {
     const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/events`);
     if (!res.ok) {
-      dataViewEl.innerHTML = `<p class="placeholder">Failed to load events.</p>`;
+      statsContainerEl.innerHTML = "";
+      searchBarContainerEl.hidden = true;
+      timelineContainerEl.innerHTML = `<p class="placeholder">Failed to load events.</p>`;
       return;
     }
     const events = await res.json();
@@ -299,7 +317,9 @@ async function refreshSessions({ force = false } = {}) {
     loadedEvents = [];
     viewTabsEl.hidden = true;
     currentSessionEl.textContent = "Select a session to view events";
-    dataViewEl.innerHTML = `<p class="placeholder">Select a session from the sidebar to inspect events.</p>`;
+    statsContainerEl.innerHTML = "";
+    searchBarContainerEl.hidden = true;
+    timelineContainerEl.innerHTML = `<p class="placeholder">Select a session from the sidebar to inspect events.</p>`;
   }
 }
 
@@ -325,6 +345,13 @@ toggleSortBtn.addEventListener("click", () => {
   sortDirection = sortDirection === "desc" ? "asc" : "desc";
   updateSortToggle();
   setActiveView(selectedView);
+});
+
+eventSearchEl.addEventListener("input", () => {
+  searchQuery = eventSearchEl.value;
+  if (selectedView === "rendered") {
+    timelineContainerEl.innerHTML = renderTimeline(getFilteredEvents(getDisplayedEvents(loadedEvents)));
+  }
 });
 
 updateSortToggle();

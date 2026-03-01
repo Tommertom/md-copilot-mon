@@ -430,7 +430,7 @@ index.onChange(() => {
 
 async function getCachedSessions(): Promise<SessionInfo[]> {
   if (!sessionCache) {
-    sessionCache = await discoverSessions(index.list().map((entry) => entry.path));
+    sessionCache = await discoverSessions(index.list().map((entry) => entry.path), index.sessionDirectories());
   }
   return sessionCache;
 }

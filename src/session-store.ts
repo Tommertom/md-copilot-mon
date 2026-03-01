@@ -116,9 +116,10 @@ function readTableRows(
 }
 
 export async function discoverSessions(
-  trackedFilePaths: string[]
+  trackedFilePaths: string[],
+  additionalSessionDirs: string[] = []
 ): Promise<SessionInfo[]> {
-  const sessionDirs = new Set<string>();
+  const sessionDirs = new Set<string>(additionalSessionDirs);
   for (const filePath of trackedFilePaths) {
     const sessionDir = findSessionStateDir(filePath);
     if (sessionDir) {
@@ -163,6 +164,28 @@ export async function discoverSessions(
       workspace,
     });
   }
+
+  // Sort sessions by last activity descending (most recent first).
+  // Use workspace.updated_at when available, fall back to directory mtime.
+  const mtimeCache = new Map<string, number>();
+  await Promise.all(
+    sessions.map(async (s) => {
+      if (s.workspace?.updated_at) {
+        const ts = Date.parse(s.workspace.updated_at);
+        if (Number.isFinite(ts)) {
+          mtimeCache.set(s.directory, ts);
+          return;
+        }
+      }
+      try {
+        const stat = await fs.stat(s.directory);
+        mtimeCache.set(s.directory, stat.mtimeMs);
+      } catch {
+        mtimeCache.set(s.directory, 0);
+      }
+    })
+  );
+  sessions.sort((a, b) => (mtimeCache.get(b.directory) ?? 0) - (mtimeCache.get(a.directory) ?? 0));
 
   return sessions;
 }
