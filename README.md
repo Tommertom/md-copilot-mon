@@ -80,7 +80,7 @@ FILE_MAX_LIMIT=20
 
 *   `GET /api/files`  
     Returns recent markdown files (max `FILE_MAX_LIMIT`) with `id`, display `path`, `title`, and `mtimeMs`.  
-    `title` is the first line without `#` when the first line starts with `#` ; otherwise an empty string.
+    `title` is the first line without `#` when the first line starts with `#`; if missing for files under `.copilot/session-data` or `.copilot/session-state`, it falls back to `.copilot/session-state/<session>/workspace.yml|workspace.yaml` `summary`; otherwise it is an empty string.
 *   `GET /api/files/:id`  
     Returns one file as `{ path, markdown, html }`.
 *   `PUT /api/files/:id`  

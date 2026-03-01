@@ -3,6 +3,7 @@ import type { FSWatcher } from "chokidar";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { readWorkspaceYaml } from "./session-store.js";
 import { FileEntry } from "./types.js";
 
 function toId(filePath: string): string {
@@ -14,7 +15,8 @@ function isMarkdown(filePath: string): boolean {
 }
 
 function isWorkspaceYaml(filePath: string): boolean {
-  if (path.basename(filePath) !== "workspace.yml") return false;
+  const fileName = path.basename(filePath).toLowerCase();
+  if (fileName !== "workspace.yml" && fileName !== "workspace.yaml") return false;
   const parts = filePath.split(path.sep);
   return parts.includes("session-state");
 }
@@ -25,6 +27,49 @@ function extractTitle(markdown: string): string {
     return "";
   }
   return firstLine.slice(2).trim();
+}
+
+function findWorkspaceDirForMarkdown(filePath: string): string | undefined {
+  const parts = filePath.split(path.sep);
+  const sessionStateIndex = parts.indexOf("session-state");
+  if (
+    sessionStateIndex > 0 &&
+    sessionStateIndex + 1 < parts.length &&
+    parts[sessionStateIndex - 1] === ".copilot"
+  ) {
+    return parts.slice(0, sessionStateIndex + 2).join(path.sep);
+  }
+
+  const sessionDataIndex = parts.indexOf("session-data");
+  if (
+    sessionDataIndex < 0 ||
+    sessionDataIndex === 0 ||
+    sessionDataIndex + 1 >= parts.length ||
+    parts[sessionDataIndex - 1] !== ".copilot"
+  ) {
+    return undefined;
+  }
+  const sessionId = parts.length - sessionDataIndex === 2
+    ? path.basename(parts[sessionDataIndex + 1], path.extname(parts[sessionDataIndex + 1]))
+    : parts[sessionDataIndex + 1];
+  if (!sessionId) {
+    return undefined;
+  }
+  const copilotDir = parts.slice(0, sessionDataIndex).join(path.sep);
+  return path.join(copilotDir, "session-state", sessionId);
+}
+
+async function resolveTitle(filePath: string, markdown: string): Promise<string> {
+  const directTitle = extractTitle(markdown);
+  if (directTitle) {
+    return directTitle;
+  }
+  const workspaceDir = findWorkspaceDirForMarkdown(filePath);
+  if (!workspaceDir) {
+    return "";
+  }
+  const workspace = await readWorkspaceYaml(workspaceDir);
+  return workspace?.summary?.trim() || "";
 }
 
 export class MarkdownIndex {
@@ -142,7 +187,7 @@ export class MarkdownIndex {
       const markdown = await fs.readFile(filePath, "utf8");
       const id = toId(filePath);
       const previous = this.byPath.get(filePath);
-      const entry: FileEntry = { id, path: filePath, title: extractTitle(markdown), mtimeMs: stat.mtimeMs };
+      const entry: FileEntry = { id, path: filePath, title: await resolveTitle(filePath, markdown), mtimeMs: stat.mtimeMs };
       this.byPath.set(filePath, entry);
       this.byId.set(id, filePath);
       return !previous || previous.mtimeMs !== entry.mtimeMs;

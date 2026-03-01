@@ -51,32 +51,34 @@ async function findSqliteFiles(dir: string): Promise<string[]> {
   }
 }
 
-async function readWorkspaceYaml(dir: string): Promise<WorkspaceInfo | undefined> {
-  const yamlPath = path.join(dir, "workspace.yml");
-  try {
-    const content = await fs.readFile(yamlPath, "utf8");
-    const parsed = yaml.load(content);
-    if (parsed && typeof parsed === "object" && "id" in parsed) {
-      const obj = parsed as Record<string, unknown>;
-      const rawId = obj.id;
-      if (typeof rawId !== "string" || rawId.trim() === "") {
-        return undefined;
+export async function readWorkspaceYaml(dir: string): Promise<WorkspaceInfo | undefined> {
+  for (const workspaceFileName of ["workspace.yml", "workspace.yaml"]) {
+    const yamlPath = path.join(dir, workspaceFileName);
+    try {
+      const content = await fs.readFile(yamlPath, "utf8");
+      const parsed = yaml.load(content);
+      if (parsed && typeof parsed === "object" && "id" in parsed) {
+        const obj = parsed as Record<string, unknown>;
+        const rawId = obj.id;
+        if (typeof rawId !== "string" || rawId.trim() === "") {
+          return undefined;
+        }
+        const toISOString = (val: unknown): string => {
+          if (val instanceof Date) return val.toISOString();
+          return String(val ?? "");
+        };
+        return {
+          id: rawId,
+          cwd: String(obj.cwd ?? ""),
+          summary: String(obj.summary ?? ""),
+          summary_count: Number.isFinite(Number(obj.summary_count)) ? Number(obj.summary_count) : 0,
+          created_at: toISOString(obj.created_at),
+          updated_at: toISOString(obj.updated_at),
+        };
       }
-      const toISOString = (val: unknown): string => {
-        if (val instanceof Date) return val.toISOString();
-        return String(val ?? "");
-      };
-      return {
-        id: rawId,
-        cwd: String(obj.cwd ?? ""),
-        summary: String(obj.summary ?? ""),
-        summary_count: Number.isFinite(Number(obj.summary_count)) ? Number(obj.summary_count) : 0,
-        created_at: toISOString(obj.created_at),
-        updated_at: toISOString(obj.updated_at),
-      };
+    } catch {
+      // workspace file may not exist or may be unreadable
     }
-  } catch {
-    // workspace.yml may not exist or may be unreadable
   }
   return undefined;
 }
