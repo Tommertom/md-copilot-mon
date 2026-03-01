@@ -68,6 +68,27 @@ async function resolveTitle(filePath: string, markdown: string): Promise<string>
   return workspace?.summary?.trim() || "";
 }
 
+async function filterExistingDirs(dirs: string[]): Promise<string[]> {
+  const results = await Promise.all(
+    dirs.map(async (dir) => {
+      try {
+        const stat = await fs.stat(dir);
+        return stat.isDirectory() ? dir : null;
+      } catch (error) {
+        const err = error as NodeJS.ErrnoException;
+        if (err && (err.code === "ENOENT" || err.code === "ENOTDIR")) {
+          // Path does not exist or is not a directory: treat as non-existent.
+          return null;
+        }
+        // Unexpected failure: surface it so misconfigured or inaccessible roots are visible.
+        console.warn(`filterExistingDirs: failed to stat directory "${dir}":`, err);
+        throw err;
+      }
+    })
+  );
+  return results.filter((dir): dir is string => dir !== null);
+}
+
 export class MarkdownIndex {
   private readonly byPath = new Map<string, FileEntry>();
   private readonly byId = new Map<string, string>();
@@ -86,9 +107,13 @@ export class MarkdownIndex {
     if (this.loadExistingOnStart) {
       await this.seedExisting();
     }
+    const watchRoots = await filterExistingDirs(this.roots);
+    if (watchRoots.length === 0) {
+      console.warn("No watchable root directories found; file watching is disabled.");
+    }
     this.watcherStopping = false;
-    this.watcher = chokidar.watch(this.roots, {
-      ignored: (p) => p.includes("/node_modules/") || p.includes("/.git/"),
+    this.watcher = chokidar.watch(watchRoots, {
+      ignored: (p) => p.includes("/node_modules/") || p.includes("/.git/") || p.includes("\\node_modules\\") || p.includes("\\.git\\"),
       persistent: true,
       ignoreInitial: true,
       awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 100 }
