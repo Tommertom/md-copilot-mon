@@ -239,18 +239,13 @@ pasteMdBtn.addEventListener("click", async () => {
   if (!selectedId) return;
   try {
     const markdown = await navigator.clipboard.readText();
-    const res = await fetch("/api/markdown/render", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ markdown })
-    });
-    if (!res.ok) {
-      alert(`Failed to render pasted markdown (HTTP ${res.status}).`);
-      return;
-    }
-    const data = await res.json();
-    setEditorHtml(data.html);
-    await renderMermaidInEditor();
+    setEditorHtml(
+      markdown
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll("\n", "<br>")
+    );
     updateSaveButtonState();
   } catch (error) {
     console.error("Failed to paste markdown from clipboard", error);

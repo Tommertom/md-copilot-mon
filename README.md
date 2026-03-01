@@ -85,8 +85,6 @@ FILE_MAX_LIMIT=20
     Returns one file as `{ path, markdown, html }`.
 *   `PUT /api/files/:id`  
     Saves markdown content from `{ markdown, baseMarkdown? }` and returns `{ path, markdown, html }`. If `baseMarkdown` is provided and the file changed on disk meanwhile, returns `409` with latest `{ path, markdown, html }` so the UI can reload theirs or keep mine.
-*   `POST /api/markdown/render`
-    Renders `{ markdown }` and returns `{ html }` for client-side clipboard paste replacement in the editor.
 *   `GET /api/files/:id/docx`  
     Downloads the selected markdown file as `.docx`.
 *   `GET /api/changes`  
