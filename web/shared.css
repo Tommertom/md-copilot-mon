@@ -19,3 +19,14 @@ body { margin: 0; height: 100vh; overflow: hidden; font-family: Arial, sans-seri
 .data-table { border-collapse: collapse; width: 100%; font-size: 14px; }
 .data-table th { background: #f5f7fa; text-align: left; padding: 10px 12px; border-bottom: 2px solid #ddd; font-weight: 600; position: sticky; top: 0; }
 .data-table tr:hover { background: #f9fbff; }
+
+@media (max-width: 1099px) {
+  .toolbar { flex-direction: column; align-items: flex-start; }
+  #toolbar-actions {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  .app-menu { margin-left: auto; }
+}
