@@ -22,6 +22,7 @@ npx md-copilot-viewer
 *   `Ctrl+S` (`Cmd+S` on macOS) triggers the same save action as the **Save** button for the active file.
 *   Quick file list for fast context switching while editing rendered markdown directly, showing both detected title and file path.
 *   Automatically surfaces plans generated in Copilot plan mode.
+*   Copy rendered editor content as raw markdown to the clipboard, and paste markdown from the clipboard back into the editor.
 *   Optional DOCX export for sharing notes outside the app.
 
 ## How it works
@@ -84,6 +85,8 @@ FILE_MAX_LIMIT=20
     Returns one file as `{ path, markdown, html }`.
 *   `PUT /api/files/:id`  
     Saves markdown content from `{ markdown, baseMarkdown? }` and returns `{ path, markdown, html }`. If `baseMarkdown` is provided and the file changed on disk meanwhile, returns `409` with latest `{ path, markdown, html }` so the UI can reload theirs or keep mine.
+*   `POST /api/markdown/render`
+    Renders `{ markdown }` and returns `{ html }` for client-side clipboard paste replacement in the editor.
 *   `GET /api/files/:id/docx`  
     Downloads the selected markdown file as `.docx`.
 *   `GET /api/changes`  

@@ -2,7 +2,8 @@ const fileListEl = document.getElementById("file-list");
 const searchInputEl = document.getElementById("file-search");
 const editorEl = document.getElementById("editor");
 const currentFileEl = document.getElementById("current-file");
-const downloadMdBtn = document.getElementById("download-md");
+const copyMdBtn = document.getElementById("copy-md");
+const pasteMdBtn = document.getElementById("paste-md");
 const downloadDocxBtn = document.getElementById("download-docx");
 const openDiffViewerBtn = document.getElementById("open-diff-viewer");
 const saveBtn = document.getElementById("save-file");
@@ -190,7 +191,8 @@ async function refreshFiles() {
     setEditorHtml("<p>No markdown files found yet.</p>");
     setEditorEnabled(false);
     currentFileEl.textContent = "";
-    downloadMdBtn.disabled = true;
+    copyMdBtn.disabled = true;
+    pasteMdBtn.disabled = true;
     downloadDocxBtn.disabled = true;
     saveBtn.disabled = true;
   }
@@ -213,7 +215,8 @@ async function loadPreview(id) {
   setEditorEnabled(true);
   await renderMermaidInEditor();
   setCurrentFileLabel(data.path);
-  downloadMdBtn.disabled = false;
+  copyMdBtn.disabled = false;
+  pasteMdBtn.disabled = false;
   downloadDocxBtn.disabled = false;
   updateSaveButtonState();
 }
@@ -222,18 +225,37 @@ async function selectFile(id) {
   await loadPreview(id);
 }
 
-downloadMdBtn.addEventListener("click", () => {
+copyMdBtn.addEventListener("click", async () => {
   if (!selectedId) return;
-  const displayedPath = getSelectedFile()?.path || currentFileEl.textContent.trim();
-  const baseName = displayedPath ? (displayedPath.split("/").pop() || "markdown.md") : "markdown.md";
-  const fileName = baseName.toLowerCase().endsWith(".md") ? baseName : `${baseName}.md`;
-  const blob = new Blob([getEditorMarkdown()], { type: "text/markdown;charset=utf-8" });
-  const downloadUrl = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = downloadUrl;
-  link.download = fileName;
-  link.click();
-  queueMicrotask(() => URL.revokeObjectURL(downloadUrl));
+  try {
+    await navigator.clipboard.writeText(getEditorMarkdown());
+  } catch (error) {
+    console.error("Failed to copy markdown to clipboard", error);
+    alert("Failed to copy markdown to clipboard.");
+  }
+});
+
+pasteMdBtn.addEventListener("click", async () => {
+  if (!selectedId) return;
+  try {
+    const markdown = await navigator.clipboard.readText();
+    const res = await fetch("/api/markdown/render", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ markdown })
+    });
+    if (!res.ok) {
+      alert(`Failed to render pasted markdown (HTTP ${res.status}).`);
+      return;
+    }
+    const data = await res.json();
+    setEditorHtml(data.html);
+    await renderMermaidInEditor();
+    updateSaveButtonState();
+  } catch (error) {
+    console.error("Failed to paste markdown from clipboard", error);
+    alert("Failed to paste markdown from clipboard.");
+  }
 });
 
 downloadDocxBtn.addEventListener("click", () => {

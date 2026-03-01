@@ -190,6 +190,15 @@ app.get("/api/files/:id/md", async (req, res) => {
   }
 });
 
+app.post("/api/markdown/render", (req, res) => {
+  const markdown = req.body?.markdown;
+  if (typeof markdown !== "string") {
+    res.status(400).json({ error: "Field 'markdown' must be a string" });
+    return;
+  }
+  res.json({ html: renderMarkdown(markdown) });
+});
+
 app.put("/api/files/:id", saveRateLimiter, async (req, res) => {
   const filePath = index.resolve(req.params.id);
   if (!filePath) {
