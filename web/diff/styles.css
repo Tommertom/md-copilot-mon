@@ -38,3 +38,7 @@
   border-radius: 4px;
 }
 #diff-output { margin-top: 12px; }
+/* diff2html uses position:absolute for line numbers but never sets position:relative
+   on any ancestor, so line numbers escape the scroll container and appear fixed.
+   Setting position:relative on each td makes the cell the containing block. */
+#diff-output td { position: relative; }

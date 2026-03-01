@@ -357,5 +357,5 @@ eventSearchEl.addEventListener("input", () => {
 updateSortToggle();
 void refreshSessions({ force: true });
 
-connectSessionChangeEvents(refreshSessions);
+connectSessionChangeEvents(() => refreshSessions({ force: true }));
 initResizer();
