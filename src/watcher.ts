@@ -5,10 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { readWorkspaceYaml } from "./session-store.js";
 import { FileEntry } from "./types.js";
-
-function toId(filePath: string): string {
-  return Buffer.from(filePath, "utf8").toString("base64url");
-}
+import { toBase64Id, extractFirstHeading } from "./util.js";
 
 function isMarkdown(filePath: string): boolean {
   return filePath.toLowerCase().endsWith(".md");
@@ -19,14 +16,6 @@ function isWorkspaceYaml(filePath: string): boolean {
   if (fileName !== "workspace.yml" && fileName !== "workspace.yaml") return false;
   const parts = filePath.split(path.sep);
   return parts.includes("session-state");
-}
-
-function extractTitle(markdown: string): string {
-  const [firstLine = ""] = markdown.split(/\r?\n/, 1);
-  if (!firstLine.startsWith("# ")) {
-    return "";
-  }
-  return firstLine.slice(2).trim();
 }
 
 function findWorkspaceDirForMarkdown(filePath: string): string | undefined {
@@ -60,7 +49,7 @@ function findWorkspaceDirForMarkdown(filePath: string): string | undefined {
 }
 
 async function resolveTitle(filePath: string, markdown: string): Promise<string> {
-  const directTitle = extractTitle(markdown);
+  const directTitle = extractFirstHeading(markdown);
   if (directTitle) {
     return directTitle;
   }
@@ -177,7 +166,8 @@ export class MarkdownIndex {
       return false;
     }
     if (this.isExcluded(filePath)) {
-      return this.remove(filePath);
+      this.remove(filePath);
+      return true; // still notify: excluded files indicate session activity
     }
     try {
       const stat = await fs.stat(filePath);
@@ -185,7 +175,7 @@ export class MarkdownIndex {
         return false;
       }
       const markdown = await fs.readFile(filePath, "utf8");
-      const id = toId(filePath);
+      const id = toBase64Id(filePath);
       const previous = this.byPath.get(filePath);
       const entry: FileEntry = { id, path: filePath, title: await resolveTitle(filePath, markdown), mtimeMs: stat.mtimeMs };
       this.byPath.set(filePath, entry);

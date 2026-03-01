@@ -36,14 +36,14 @@ Other menu items not shown: session files, session research, checkpoints, and po
 ## Install from npm
 
 ```bash
-npm i -g md-copilot-viewer
+npm i -g md-copilot-viewer@latest
 md-copilot-viewer
 ```
 
 Or run without installing globally:
 
 ```bash
-npx md-copilot-viewer
+npx md-copilot-viewer@latest
 ```
 
 On first start, the app creates `.env-md-copilot-viewer` from `.env.template` if it does not exist.

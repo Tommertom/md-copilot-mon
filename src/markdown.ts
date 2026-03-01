@@ -2,12 +2,13 @@ import MarkdownIt from "markdown-it";
 import texmath from "markdown-it-texmath";
 import katex from "katex";
 import HTMLtoDOCX from "html-to-docx";
+import { extractFirstHeading } from "./util.js";
 
 const md = new MarkdownIt({ html: false, linkify: true, breaks: true })
   .use(texmath, { engine: katex, delimiters: "dollars" });
 
 const defaultFence = md.renderer.rules.fence;
-md.renderer.rules.fence = (tokens: any, idx: any, options: any, env: any, self: any) => {
+md.renderer.rules.fence = (tokens, idx, options, env, self): string => {
   const token = tokens[idx];
   const info = (token.info || "").trim();
   if (info === "mermaid") {
@@ -18,11 +19,6 @@ md.renderer.rules.fence = (tokens: any, idx: any, options: any, env: any, self: 
   }
   return self.renderToken(tokens, idx, options);
 };
-
-function extractTitle(markdown: string): string {
-  const match = markdown.match(/^#\s+(.+)$/m);
-  return match ? match[1].trim() : "Document";
-}
 
 function generateStyledHtml(htmlContent: string, title: string): string {
   return `<!DOCTYPE html>
@@ -60,7 +56,7 @@ export function renderMarkdown(markdown: string): string {
 }
 
 export async function markdownToDocx(markdown: string): Promise<Buffer> {
-  const title = extractTitle(markdown);
+  const title = extractFirstHeading(markdown) || "Document";
   const htmlContent = md.render(markdown);
   const fullHtml = generateStyledHtml(htmlContent, title);
   return HTMLtoDOCX(fullHtml, null, {

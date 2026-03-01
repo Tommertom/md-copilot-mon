@@ -1,4 +1,5 @@
 import { initResizer } from "/resizer.js";
+import { renderSessionList, connectSessionChangeEvents } from "/shared.js";
 
 const sessionListEl = document.getElementById("session-list");
 const currentSessionEl = document.getElementById("current-session");
@@ -11,34 +12,6 @@ const commitDiffBtn = document.getElementById("commit-diff");
 
 let sessions = [];
 let selectedSessionId = null;
-
-function renderSessionList() {
-  sessionListEl.innerHTML = "";
-  for (const session of sessions) {
-    const li = document.createElement("li");
-    li.className = selectedSessionId === session.id ? "active" : "";
-    const label = document.createElement("div");
-    label.className = "session-item-label";
-    const title = document.createElement("span");
-    title.className = "session-item-title";
-    title.textContent = session.title || session.directory;
-    const dirPath = document.createElement("span");
-    dirPath.className = "session-item-path";
-    dirPath.textContent = session.directory;
-    label.append(title, dirPath);
-    li.appendChild(label);
-    li.setAttribute("tabindex", "0");
-    li.setAttribute("role", "button");
-    li.addEventListener("click", () => selectSession(session.id));
-    li.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        void selectSession(session.id);
-      }
-    });
-    sessionListEl.appendChild(li);
-  }
-}
 
 function showStatus(text) {
   statusEl.hidden = false;
@@ -101,10 +74,8 @@ async function refreshSessions() {
   if (selectedSessionId && !sessions.some((s) => s.id === selectedSessionId)) {
     selectedSessionId = null;
   }
-  renderSessionList();
+  renderSessionList(sessionListEl, sessions, selectedSessionId, selectSession);
   if (selectedSessionId) {
-    setCommitControlsEnabled(true);
-    await loadDiff(selectedSessionId);
   } else {
     setCommitControlsEnabled(false);
     currentSessionEl.textContent = "Select a session to view git diff";
@@ -118,7 +89,7 @@ async function selectSession(sessionId) {
   const previousSession = sessions.find((item) => item.id === selectedSessionId);
   const nextSession = sessions.find((item) => item.id === sessionId);
   selectedSessionId = sessionId;
-  renderSessionList();
+  renderSessionList(sessionListEl, sessions, selectedSessionId, selectSession);
   setCommitControlsEnabled(true);
   currentSessionEl.textContent = nextSession?.title || nextSession?.directory || "Session";
   const previousCwd = typeof previousSession?.workspace?.cwd === "string" ? previousSession.workspace.cwd.trim() : "";
@@ -187,30 +158,6 @@ setCommitControlsEnabled(false);
 
 void refreshSessions();
 
-let reconnectTimer = null;
-let refreshDebounceTimer = null;
-
-function connectSessionChangeEvents() {
-  const events = new EventSource("/api/session-changes");
-  events.onmessage = () => {
-    if (refreshDebounceTimer !== null) {
-      clearTimeout(refreshDebounceTimer);
-    }
-    refreshDebounceTimer = setTimeout(() => {
-      refreshDebounceTimer = null;
-      void refreshSessions();
-    }, 200);
-  };
-  events.onerror = () => {
-    events.close();
-    if (reconnectTimer) return;
-    reconnectTimer = setTimeout(() => {
-      reconnectTimer = null;
-      connectSessionChangeEvents();
-    }, 1000);
-  };
-}
-
-connectSessionChangeEvents();
+connectSessionChangeEvents(refreshSessions);
 
 initResizer();

@@ -187,6 +187,28 @@ const index = new MarkdownIndex(roots, loadExistingMd, excludePatterns);
 const execFileAsync = promisify(execFile);
 const changeClients = new Set<Response>();
 const sessionChangeClients = new Set<Response>();
+
+function registerSseClient(res: Response, clientSet: Set<Response>): void {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders();
+  clientSet.add(res);
+  res.on("close", () => {
+    clientSet.delete(res);
+  });
+}
+
+function broadcastSse(clientSet: Set<Response>, data: string): void {
+  for (const client of clientSet) {
+    try {
+      client.write(data);
+    } catch {
+      clientSet.delete(client);
+    }
+  }
+}
 let sessionCache: SessionInfo[] | null = null;
 const currentFile = fileURLToPath(import.meta.url);
 const webDir = path.resolve(path.dirname(currentFile), "../web");
@@ -236,6 +258,16 @@ async function resolveGitCwd(sessionIdRaw: string | undefined): Promise<string> 
 }
 
 app.use(express.json({ limit: "5mb" }));
+
+async function resolveSession(id: string, res: Response): Promise<SessionInfo | null> {
+  const sessions = await getCachedSessions();
+  const session = sessions.find((s) => s.id === id);
+  if (!session) {
+    res.status(404).json({ error: "Session not found" });
+    return null;
+  }
+  return session;
+}
 app.use(express.static(webDir));
 
 app.get("/api/files", (_req, res) => {
@@ -387,33 +419,13 @@ app.put("/api/files/:id", saveRateLimiter, async (req, res) => {
 });
 
 app.get("/api/changes", (_req, res) => {
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  res.setHeader("X-Accel-Buffering", "no");
-  res.flushHeaders();
-  changeClients.add(res);
-  res.on("close", () => {
-    changeClients.delete(res);
-  });
+  registerSseClient(res, changeClients);
 });
 
 index.onChange(() => {
   sessionCache = null;
-  for (const client of changeClients) {
-    try {
-      client.write("data: changed\n\n");
-    } catch {
-      changeClients.delete(client);
-    }
-  }
-  for (const client of sessionChangeClients) {
-    try {
-      client.write("data: changed\n\n");
-    } catch {
-      sessionChangeClients.delete(client);
-    }
-  }
+  broadcastSse(changeClients, "data: changed\n\n");
+  broadcastSse(sessionChangeClients, "data: changed\n\n");
 });
 
 async function getCachedSessions(): Promise<SessionInfo[]> {
@@ -443,12 +455,8 @@ app.get("/api/sessions", async (_req, res) => {
 
 app.get("/api/sessions/:id", async (req, res) => {
   try {
-    const sessions = await getCachedSessions();
-    const session = sessions.find((s) => s.id === req.params.id);
-    if (!session) {
-      res.status(404).json({ error: "Session not found" });
-      return;
-    }
+    const session = await resolveSession(req.params.id, res);
+    if (!session) return;
     const data = getAllSessionData(session);
     res.json({
       id: session.id,
@@ -465,12 +473,8 @@ app.get("/api/sessions/:id", async (req, res) => {
 
 app.get("/api/sessions/:id/events", async (req, res) => {
   try {
-    const sessions = await getCachedSessions();
-    const session = sessions.find((s) => s.id === req.params.id);
-    if (!session) {
-      res.status(404).json({ error: "Session not found" });
-      return;
-    }
+    const session = await resolveSession(req.params.id, res);
+    if (!session) return;
     const events = await getSessionEvents(session);
     res.json(events);
   } catch (error) {
@@ -480,12 +484,8 @@ app.get("/api/sessions/:id/events", async (req, res) => {
 
 app.get("/api/sessions/:id/files", async (req, res) => {
   try {
-    const sessions = await getCachedSessions();
-    const session = sessions.find((s) => s.id === req.params.id);
-    if (!session) {
-      res.status(404).json({ error: "Session not found" });
-      return;
-    }
+    const session = await resolveSession(req.params.id, res);
+    if (!session) return;
     const sessionFileDir = await resolveSessionFileDir(session);
     if (!sessionFileDir) {
       res.json({ directory: "", files: [] });
@@ -505,12 +505,8 @@ app.get("/api/sessions/:id/files", async (req, res) => {
 
 app.get("/api/sessions/:id/files/download", async (req, res) => {
   try {
-    const sessions = await getCachedSessions();
-    const session = sessions.find((s) => s.id === req.params.id);
-    if (!session) {
-      res.status(404).json({ error: "Session not found" });
-      return;
-    }
+    const session = await resolveSession(req.params.id, res);
+    if (!session) return;
     const relativePath = typeof req.query.path === "string" ? req.query.path : "";
     if (!relativePath) {
       res.status(400).json({ error: "Missing file path" });
@@ -544,12 +540,8 @@ app.get("/api/sessions/:id/files/download", async (req, res) => {
 
 app.get("/api/sessions/:id/research", async (req, res) => {
   try {
-    const sessions = await getCachedSessions();
-    const session = sessions.find((s) => s.id === req.params.id);
-    if (!session) {
-      res.status(404).json({ error: "Session not found" });
-      return;
-    }
+    const session = await resolveSession(req.params.id, res);
+    if (!session) return;
     const sessionResearchDir = await resolveSessionResearchDir(session);
     if (!sessionResearchDir) {
       res.json({ directory: "", files: [] });
@@ -569,12 +561,8 @@ app.get("/api/sessions/:id/research", async (req, res) => {
 
 app.get("/api/sessions/:id/research/download", async (req, res) => {
   try {
-    const sessions = await getCachedSessions();
-    const session = sessions.find((s) => s.id === req.params.id);
-    if (!session) {
-      res.status(404).json({ error: "Session not found" });
-      return;
-    }
+    const session = await resolveSession(req.params.id, res);
+    if (!session) return;
     const relativePath = typeof req.query.path === "string" ? req.query.path : "";
     if (!relativePath) {
       res.status(400).json({ error: "Missing file path" });
@@ -608,12 +596,8 @@ app.get("/api/sessions/:id/research/download", async (req, res) => {
 
 app.get("/api/sessions/:id/checkpoints", async (req, res) => {
   try {
-    const sessions = await getCachedSessions();
-    const session = sessions.find((s) => s.id === req.params.id);
-    if (!session) {
-      res.status(404).json({ error: "Session not found" });
-      return;
-    }
+    const session = await resolveSession(req.params.id, res);
+    if (!session) return;
     const sessionCheckpointsDir = await resolveSessionCheckpointsDir(session);
     if (!sessionCheckpointsDir) {
       res.json({ directory: "", files: [] });
@@ -634,12 +618,8 @@ app.get("/api/sessions/:id/checkpoints", async (req, res) => {
 
 app.get("/api/sessions/:id/checkpoints/file", async (req, res) => {
   try {
-    const sessions = await getCachedSessions();
-    const session = sessions.find((s) => s.id === req.params.id);
-    if (!session) {
-      res.status(404).json({ error: "Session not found" });
-      return;
-    }
+    const session = await resolveSession(req.params.id, res);
+    if (!session) return;
     const relativePath = typeof req.query.path === "string" ? req.query.path : "";
     if (!relativePath) {
       res.status(400).json({ error: "Missing file path" });
@@ -679,12 +659,8 @@ app.get("/api/sessions/:id/checkpoints/file", async (req, res) => {
 
 app.get("/api/sessions/:id/:table", async (req, res) => {
   try {
-    const sessions = await getCachedSessions();
-    const session = sessions.find((s) => s.id === req.params.id);
-    if (!session) {
-      res.status(404).json({ error: "Session not found" });
-      return;
-    }
+    const session = await resolveSession(req.params.id, res);
+    if (!session) return;
     if (!session.tables.includes(req.params.table)) {
       res.status(404).json({ error: "Table not found" });
       return;
@@ -697,15 +673,7 @@ app.get("/api/sessions/:id/:table", async (req, res) => {
 });
 
 app.get("/api/session-changes", (_req, res) => {
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  res.setHeader("X-Accel-Buffering", "no");
-  res.flushHeaders();
-  sessionChangeClients.add(res);
-  res.on("close", () => {
-    sessionChangeClients.delete(res);
-  });
+  registerSseClient(res, sessionChangeClients);
 });
 
 app.get("/api/active-sessions", async (_req, res) => {
@@ -725,10 +693,11 @@ app.get("/api/active-sessions", async (_req, res) => {
 async function start(): Promise<void> {
   await index.start();
   let runningPort = port;
+  let server!: ReturnType<typeof createServer>;
   try {
     while (true) {
       const started = await new Promise<boolean>((resolve, reject) => {
-        const server = createServer(app);
+        server = createServer(app);
         server.once("error", (error) => {
           const startError = error as NodeJS.ErrnoException;
           if (autoIncrementPort && startError.code === "EADDRINUSE") {
@@ -758,6 +727,13 @@ async function start(): Promise<void> {
     process.exit(1);
     return;
   }
+  const shutdown = async (): Promise<void> => {
+    server.close();
+    await index.stop();
+    process.exit(0);
+  };
+  process.once("SIGTERM", () => { void shutdown(); });
+  process.once("SIGINT", () => { void shutdown(); });
   if (autoIncrementPort && runningPort !== port) {
     console.log(`Requested port ${port} was in use, using port ${runningPort} instead.`);
   }

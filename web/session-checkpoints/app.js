@@ -1,4 +1,5 @@
 import { initResizer } from "/resizer.js";
+import { escapeHtml, formatSize, formatMtime, renderSessionList, connectSessionChangeEvents } from "/shared.js";
 
 const sessionListEl = document.getElementById("session-list");
 const dataViewEl = document.getElementById("data-view");
@@ -13,55 +14,6 @@ let sessions = [];
 let selectedSessionId = null;
 let selectedCheckpointPath = "";
 let checkpointFiles = [];
-
-function renderSessionList() {
-  sessionListEl.innerHTML = "";
-  for (const session of sessions) {
-    const li = document.createElement("li");
-    li.className = selectedSessionId === session.id ? "active" : "";
-    const label = document.createElement("div");
-    label.className = "session-item-label";
-    const title = document.createElement("span");
-    title.className = "session-item-title";
-    title.textContent = session.title || session.directory;
-    const dirPath = document.createElement("span");
-    dirPath.className = "session-item-path";
-    dirPath.textContent = session.directory;
-    label.append(title, dirPath);
-    li.appendChild(label);
-    li.setAttribute("tabindex", "0");
-    li.setAttribute("role", "button");
-    li.addEventListener("click", () => selectSession(session.id));
-    li.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        selectSession(session.id);
-      }
-    });
-    sessionListEl.appendChild(li);
-  }
-}
-
-function escapeHtml(text) {
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-function formatSize(bytes) {
-  const size = Number(bytes);
-  if (!Number.isFinite(size) || size < 0) return "";
-  if (size < 1024) return `${size} B`;
-  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
-  if (size < 1024 * 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(size / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-}
-
-function formatMtime(mtimeMs) {
-  const value = Number(mtimeMs);
-  if (!Number.isFinite(value)) return "";
-  return new Date(value).toLocaleString();
-}
 
 function clearJsonViewer(message) {
   currentCheckpointEl.textContent = message;
@@ -189,7 +141,7 @@ async function refreshSessions() {
     checkpointFiles = [];
     selectedCheckpointPath = "";
   }
-  renderSessionList();
+  renderSessionList(sessionListEl, sessions, selectedSessionId, selectSession);
   if (selectedSessionId) {
     await loadSessionCheckpoints(selectedSessionId);
   } else {
@@ -202,7 +154,7 @@ async function refreshSessions() {
 async function selectSession(sessionId) {
   selectedSessionId = sessionId;
   selectedCheckpointPath = "";
-  renderSessionList();
+  renderSessionList(sessionListEl, sessions, selectedSessionId, selectSession);
   await loadSessionCheckpoints(sessionId);
 }
 
@@ -212,30 +164,6 @@ refreshSessionCheckpointsBtn.addEventListener("click", () => {
 
 void refreshSessions();
 
-let reconnectTimer = null;
-let refreshDebounceTimer = null;
-
-function connectSessionChangeEvents() {
-  const events = new EventSource("/api/session-changes");
-  events.onmessage = () => {
-    if (refreshDebounceTimer !== null) {
-      clearTimeout(refreshDebounceTimer);
-    }
-    refreshDebounceTimer = setTimeout(() => {
-      refreshDebounceTimer = null;
-      void refreshSessions();
-    }, 200);
-  };
-  events.onerror = () => {
-    events.close();
-    if (reconnectTimer) return;
-    reconnectTimer = setTimeout(() => {
-      reconnectTimer = null;
-      connectSessionChangeEvents();
-    }, 1000);
-  };
-}
-
-connectSessionChangeEvents();
+connectSessionChangeEvents(refreshSessions);
 
 initResizer();

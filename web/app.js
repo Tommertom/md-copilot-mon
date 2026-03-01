@@ -52,6 +52,7 @@ let initialized = false;
 let loadedMarkdown = "";
 let isSaving = false;
 let mermaidCounter = 0;
+let mermaidInitialized = false;
 const knownIds = new Set();
 const unreadIds = new Set();
 
@@ -146,7 +147,10 @@ async function renderMermaidInEditor() {
     block.replaceWith(wrapper);
   }
 
-  mermaid.initialize({ startOnLoad: false });
+  if (!mermaidInitialized) {
+    mermaid.initialize({ startOnLoad: false });
+    mermaidInitialized = true;
+  }
 
   const wrappers = editorEl.querySelectorAll(".mermaid-wrapper");
   for (const wrapper of wrappers) {
@@ -174,7 +178,14 @@ async function renderMermaidInEditor() {
 
 async function refreshFiles() {
   const res = await fetch("/api/files");
-  files = await res.json();
+  if (!res.ok) {
+    console.error("Failed to load files: HTTP", res.status);
+    files = [];
+    renderList();
+    return;
+  }
+  const data = await res.json();
+  files = data;
   const currentIds = new Set(files.map((f) => f.id));
   if (!initialized) {
     for (const file of files) {
