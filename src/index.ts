@@ -385,7 +385,8 @@ async function start(): Promise<void> {
   if (autoIncrementPort && runningPort !== port) {
     console.log(`Requested port ${port} was in use, using port ${runningPort} instead.`);
   }
-  console.log(`Server running on http://localhost:${runningPort}`);
+  const startupUrl = `http://localhost:${runningPort}`;
+  console.log(`\n\x1b[1m\x1b[32mServer running on\x1b[0m \x1b[1m\x1b[4m\x1b[36m${startupUrl}\x1b[0m\n`);
   console.log(`Config loaded from ${envFilePath}`);
   console.log(`AUTO_INCREMENT_PORT=${String(autoIncrementPort)}`);
   console.log(`LOAD_EXISTING_MD=${String(loadExistingMd)}`);
