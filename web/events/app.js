@@ -360,3 +360,32 @@ toggleSortBtn.addEventListener("click", () => {
 
 updateSortToggle();
 void refreshSessions({ force: true });
+
+let reconnectTimer = null;
+let refreshDebounceTimer = null;
+
+const sessionChangeChannel = new BroadcastChannel("md-copilot-sessions");
+
+function connectSessionChangeEvents() {
+  const events = new EventSource("/api/session-changes");
+  events.onmessage = () => {
+    if (refreshDebounceTimer !== null) {
+      clearTimeout(refreshDebounceTimer);
+    }
+    refreshDebounceTimer = setTimeout(() => {
+      refreshDebounceTimer = null;
+      void refreshSessions({ force: true });
+      sessionChangeChannel.postMessage("changed");
+    }, 200);
+  };
+  events.onerror = () => {
+    events.close();
+    if (reconnectTimer) return;
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      connectSessionChangeEvents();
+    }, 1000);
+  };
+}
+
+connectSessionChangeEvents();

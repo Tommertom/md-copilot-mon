@@ -517,3 +517,14 @@ function connectChangeEvents() {
 }
 
 connectChangeEvents();
+
+const sessionChangeChannel = new BroadcastChannel("md-copilot-sessions");
+sessionChangeChannel.onmessage = () => {
+  if (refreshDebounceTimer !== null) {
+    clearTimeout(refreshDebounceTimer);
+  }
+  refreshDebounceTimer = setTimeout(() => {
+    refreshDebounceTimer = null;
+    void refreshFiles();
+  }, 200);
+};
