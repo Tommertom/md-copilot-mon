@@ -74,8 +74,15 @@ async function filterExistingDirs(dirs: string[]): Promise<string[]> {
       try {
         const stat = await fs.stat(dir);
         return stat.isDirectory() ? dir : null;
-      } catch {
-        return null;
+      } catch (error) {
+        const err = error as NodeJS.ErrnoException;
+        if (err && (err.code === "ENOENT" || err.code === "ENOTDIR")) {
+          // Path does not exist or is not a directory: treat as non-existent.
+          return null;
+        }
+        // Unexpected failure: surface it so misconfigured or inaccessible roots are visible.
+        console.warn(`filterExistingDirs: failed to stat directory "${dir}":`, err);
+        throw err;
       }
     })
   );
