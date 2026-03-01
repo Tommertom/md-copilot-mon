@@ -41,6 +41,15 @@ On first start, the app creates `.env-md-copilot-viewer` from `.env.template` if
 4.  The main web UI provides a markdown editor with save button that sends updates back to the backend, which writes to disk and triggers file-change events for live refresh.
 5.  There are also dedicated mini-app views for Git Diff, Todos, Events, Session Files, Session Research, and Session Checkpoints that fetch data from the backend on demand. The Events viewer caches loaded sessions/events in-browser and only refetches when **Refresh** is clicked.
 
+## Available apps (each in its own window)
+*   **Markdown Viewer/Editor** - rendered markdown editor with save support for session notes and agent updates.
+*   **Git Diff** - rendered git diffs for tracked files in the session.
+*   **Todos** - tables of incomplete todos extracted from markdown files for each session.
+*   **Events** - parsed events lines for each session with filtering and search support.
+*   **Session Files** - file browser for session files generated internally by Copilot with metadata and download support.
+*   **Session Research** - file browser for research files generated internally by Copilot with metadata and download support.
+*   **Session Checkpoints** - list and content viewer for internal checkpoint files. Markdown files are shown in the main markdown viewer.
+
 ## Screenshot - Agent HQ example
 ![Screenshot 1 - Agent HQ](./screenshots/md-copilot-viewer.png)
 
@@ -56,8 +65,6 @@ Setup for web app development:
 *   **Pink** - Event log
 
 Other menu items not shown: session files, session research, checkpoints, and popout (undocks the markdown viewer into a separate window).
-
-
 
 ## Screenshot - Agent HQ - MD viewer only
 ![Screenshot 2 - MD viewer only](./screenshots/Screenshot-1.png)
