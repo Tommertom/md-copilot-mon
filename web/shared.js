@@ -64,6 +64,71 @@ export function renderSessionList(sessionListEl, sessions, selectedSessionId, on
 }
 
 /**
+ * Initialises the 6-dot app navigation menu for sub-apps.
+ * Builds menu items for all apps; the item matching the current page is replaced
+ * with a "md mon" link that navigates back to the main app ("/").
+ * Safe to call multiple times; re-entrant calls are ignored.
+ */
+let appMenuInitialized = false;
+export function initAppMenu() {
+  if (appMenuInitialized) return;
+  appMenuInitialized = true;
+  const appMenuButton = document.getElementById("app-menu-button");
+  const appMenuEl = document.getElementById("app-menu");
+  const appMenuContainer = appMenuButton?.closest(".app-menu");
+  if (!appMenuButton || !appMenuEl) return;
+
+  function setAppMenuOpen(isOpen) {
+    appMenuEl.hidden = !isOpen;
+    appMenuButton.setAttribute("aria-expanded", String(isOpen));
+  }
+
+  const allApps = [
+    { label: "Git Diff", path: "/diff/" },
+    { label: "Todos", path: "/todos/" },
+    { label: "Events", path: "/events/" },
+    { label: "Files", path: "/session-files/" },
+    { label: "Checkpoints", path: "/session-checkpoints/" },
+    { label: "Research", path: "/session-research/" },
+  ];
+
+  // Normalise current path to always have a trailing slash.
+  const currentPath = window.location.pathname.replace(/\/$/, "") + "/";
+
+  for (const app of allApps) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "menu-item";
+    btn.setAttribute("role", "menuitem");
+    const isCurrent = currentPath === app.path;
+    btn.textContent = isCurrent ? "md mon" : app.label;
+    const href = isCurrent ? "/" : app.path;
+    btn.addEventListener("click", () => {
+      setAppMenuOpen(false);
+      window.location.href = href;
+    });
+    appMenuEl.appendChild(btn);
+  }
+
+  appMenuButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setAppMenuOpen(appMenuEl.hidden);
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!appMenuContainer?.contains(event.target)) {
+      setAppMenuOpen(false);
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !appMenuEl.hidden) {
+      setAppMenuOpen(false);
+    }
+  });
+}
+
+/**
  * Connects to the /api/session-changes SSE endpoint and calls onRefresh
  * (debounced 200ms) whenever a change event arrives. Reconnects after 1s on error.
  * @param {function} onRefresh - Async function to call on session changes.

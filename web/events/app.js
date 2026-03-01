@@ -1,5 +1,5 @@
 import { initResizer } from "/resizer.js";
-import { escapeHtml, renderSessionList, connectSessionChangeEvents } from "/shared.js";
+import { escapeHtml, renderSessionList, connectSessionChangeEvents, initAppMenu } from "/shared.js";
 
 const sessionListEl = document.getElementById("session-list");
 const currentSessionEl = document.getElementById("current-session");
@@ -359,3 +359,4 @@ void refreshSessions({ force: true });
 
 connectSessionChangeEvents(() => refreshSessions({ force: true }));
 initResizer();
+initAppMenu();
