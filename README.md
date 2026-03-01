@@ -45,9 +45,7 @@ npx md-copilot-viewer
 
 On first start, the app creates `.env-md-copilot-viewer` from `.env.template` if it does not exist.
 
-## `.env-md-copilot-viewer` config
-
-`.env.template` includes:
+`.env-md-copilot-viewer` includes:
 
 ```env
 PORT=3011
