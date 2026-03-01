@@ -1,3 +1,5 @@
+import { initResizer } from "/resizer.js";
+
 const sessionListEl = document.getElementById("session-list");
 const dataViewEl = document.getElementById("data-view");
 const currentSessionEl = document.getElementById("current-session");
@@ -360,3 +362,5 @@ toggleSortBtn.addEventListener("click", () => {
 
 updateSortToggle();
 void refreshSessions({ force: true });
+
+initResizer();
