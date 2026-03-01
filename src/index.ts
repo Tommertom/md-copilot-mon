@@ -74,8 +74,9 @@ function toDisplayPath(filePath: string): string {
   if (filePath === homePath) {
     return "~";
   }
-  if (filePath.startsWith(`${homePath}/`)) {
-    return `~/${filePath.slice(homePath.length + 1)}`;
+  const homePrefix = homePath + path.sep;
+  if (filePath.startsWith(homePrefix)) {
+    return `~/${filePath.slice(homePrefix.length).replaceAll(path.sep, "/")}`;
   }
   return filePath;
 }
