@@ -45,27 +45,27 @@ md-copilot-viewer is a Node.js tool that watches Copilot session artifacts (mark
 
 ### Backend Layers
 
-| Layer | Responsibility | Files |
-|---|---|---|
-| **Entry / Server** | Express setup, route definitions, SSE management, env config, startup logic | `src/index.ts`, `src/cli.ts` |
-| **Watcher** | File system watching via chokidar, markdown index (in-memory), change notifications | `src/watcher.ts` |
-| **Session Store** | SQLite DB reads, workspace YAML parsing, session discovery, event log parsing | `src/session-store.ts` |
-| **Markdown** | Markdown-to-HTML rendering, DOCX export | `src/markdown.ts` |
-| **Types** | Shared type definitions | `src/types.ts` |
+| Layer              | Responsibility                                                                      | Files                        |
+| ------------------ | ----------------------------------------------------------------------------------- | ---------------------------- |
+| **Entry / Server** | Express setup, route definitions, SSE management, env config, startup logic         | `src/index.ts`, `src/cli.ts` |
+| **Watcher**        | File system watching via chokidar, markdown index (in-memory), change notifications | `src/watcher.ts`             |
+| **Session Store**  | SQLite DB reads, workspace YAML parsing, session discovery, event log parsing       | `src/session-store.ts`       |
+| **Markdown**       | Markdown-to-HTML rendering, DOCX export                                             | `src/markdown.ts`            |
+| **Types**          | Shared type definitions                                                             | `src/types.ts`               |
 
 ### Frontend Structure
 
 Each mini-app is a standalone HTML page with its own `app.js` and `styles.css`. All apps follow the same sidebar + main content layout pattern and connect to the backend via REST + SSE.
 
-| App | Path | Purpose |
-|---|---|---|
-| Main | `/` | Markdown file list, preview, editor, save, copy/paste, DOCX export |
-| Diff | `/diff/` | Git diff rendering per session (side-by-side via Diff2Html) |
-| Todos | `/todos/` | Session SQLite table viewer |
-| Events | `/events/` | Session `events.jsonl` timeline and raw viewer |
-| Session Files | `/session-files/` | Session-attached files browser & download |
-| Session Research | `/session-research/` | Session research files browser & download |
-| Session Checkpoints | `/session-checkpoints/` | Checkpoint JSON viewer |
+| App                 | Path                    | Purpose                                                            |
+| ------------------- | ----------------------- | ------------------------------------------------------------------ |
+| Main                | `/`                     | Markdown file list, preview, editor, save, copy/paste, DOCX export |
+| Diff                | `/diff/`                | Git diff rendering per session (side-by-side via Diff2Html)        |
+| Todos               | `/todos/`               | Session SQLite table viewer                                        |
+| Events              | `/events/`              | Session `events.jsonl` timeline and raw viewer                     |
+| Session Files       | `/session-files/`       | Session-attached files browser & download                          |
+| Session Research    | `/session-research/`    | Session research files browser & download                          |
+| Session Checkpoints | `/session-checkpoints/` | Checkpoint JSON viewer                                             |
 
 ---
 
@@ -128,7 +128,7 @@ Each mini-app is a standalone HTML page with its own `app.js` and `styles.css`. 
 ### 4.5 General
 
 - **No dead code**: Remove unused variables, imports, and functions
-- **Comments**: Use comments to explain *why*, not *what*. Keep JSDoc for public API functions
+- **Comments**: Use comments to explain _why_, not _what_. Keep JSDoc for public API functions
 - **Error messages**: User-facing error messages should be actionable. Log stack traces server-side only
 - **Security**: Validate and sanitize all user input. Use path traversal guards for file downloads. Apply rate limiting to mutation endpoints
 - **Testing**: (Aspirational) Add unit tests for pure functions (`markdown.ts`, `session-store.ts` parsing logic, `watcher.ts` path utilities). Add integration tests for API routes
