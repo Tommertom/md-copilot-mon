@@ -236,15 +236,37 @@ copyMdBtn.addEventListener("click", async () => {
 });
 
 pasteMdBtn.addEventListener("click", async () => {
+/**
+ * Render markdown into HTML suitable for the editor.
+ * Prefers a real markdown parser if available; otherwise falls back
+ * to the legacy escape + <br> behavior.
+ */
+function renderMarkdownToHtml(markdown) {
+  // Prefer "marked" if the host page has included it.
+  if (window.marked && typeof window.marked.parse === "function") {
+    return window.marked.parse(markdown);
+  }
+
+  // Prefer "markdown-it" if available.
+  if (window.markdownit && typeof window.markdownit === "function") {
+    const md = window.markdownit();
+    return md.render(markdown);
+  }
+
+  // Fallback: preserve previous behavior (escape + <br>).
+  const escapeContainer = document.createElement("div");
+  escapeContainer.textContent = markdown;
+  return escapeContainer.innerHTML.replaceAll("\n", "<br>");
+}
+
+pasteMdBtn.addEventListener("click", async () => {
   if (!selectedId) return;
   try {
     const markdown = await navigator.clipboard.readText();
-    const normalizedMarkdown = markdown.replace(/\r\n?/g, "\n");
-    const escapeContainer = document.createElement("div");
-    escapeContainer.textContent = normalizedMarkdown;
-    setEditorHtml(
-      escapeContainer.innerHTML.replaceAll("\n", "<br>")
-    );
+    // Keep the pasted markdown as the canonical source-of-truth.
+    loadedMarkdown = markdown;
+    // Render markdown into HTML for the editor view.
+    setEditorHtml(renderMarkdownToHtml(markdown));
     updateSaveButtonState();
   } catch (error) {
     console.error("Failed to paste markdown from clipboard", error);
