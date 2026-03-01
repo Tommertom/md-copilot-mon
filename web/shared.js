@@ -95,18 +95,34 @@ export function initAppMenu() {
   // Normalise current path to always have a trailing slash.
   const currentPath = window.location.pathname.replace(/\/$/, "") + "/";
 
+  // Always show a dedicated "md mon" entry that navigates to the main app.
+  const homeBtn = document.createElement("button");
+  homeBtn.type = "button";
+  homeBtn.className = "menu-item";
+  homeBtn.setAttribute("role", "menuitem");
+  homeBtn.textContent = "md mon";
+  homeBtn.addEventListener("click", () => {
+    setAppMenuOpen(false);
+    window.location.href = "/";
+  });
+  appMenuEl.appendChild(homeBtn);
+
   for (const app of allApps) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "menu-item";
     btn.setAttribute("role", "menuitem");
+    btn.textContent = app.label;
     const isCurrent = currentPath === app.path;
-    btn.textContent = isCurrent ? "md mon" : app.label;
-    const href = isCurrent ? "/" : app.path;
-    btn.addEventListener("click", () => {
-      setAppMenuOpen(false);
-      window.location.href = href;
-    });
+    if (isCurrent) {
+      btn.disabled = true;
+      btn.setAttribute("aria-current", "page");
+    } else {
+      btn.addEventListener("click", () => {
+        setAppMenuOpen(false);
+        window.location.href = app.path;
+      });
+    }
     appMenuEl.appendChild(btn);
   }
 

@@ -68,6 +68,8 @@ body { margin: 0; height: 100vh; overflow: hidden; font-family: Arial, sans-seri
   cursor: pointer;
 }
 .menu-item:hover, .menu-item:focus-visible { background: #eef4ff; outline: none; }
+.menu-item:disabled { color: #aaa; cursor: default; }
+.menu-item:disabled:hover { background: transparent; }
 
 @media (max-width: 1099px) {
   .toolbar { flex-direction: column; align-items: flex-start; }
