@@ -188,8 +188,6 @@ void refreshSessions();
 let reconnectTimer = null;
 let refreshDebounceTimer = null;
 
-const sessionChangeChannel = new BroadcastChannel("md-copilot-sessions");
-
 function connectSessionChangeEvents() {
   const events = new EventSource("/api/session-changes");
   events.onmessage = () => {
@@ -199,7 +197,6 @@ function connectSessionChangeEvents() {
     refreshDebounceTimer = setTimeout(() => {
       refreshDebounceTimer = null;
       void refreshSessions();
-      sessionChangeChannel.postMessage("changed");
     }, 200);
   };
   events.onerror = () => {
