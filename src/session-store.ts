@@ -1,13 +1,24 @@
 import Database from "better-sqlite3";
 import fs from "node:fs/promises";
 import path from "node:path";
+import yaml from "js-yaml";
+
+export type WorkspaceInfo = {
+  id: string;
+  cwd: string;
+  summary: string;
+  summary_count: number;
+  created_at: string;
+  updated_at: string;
+};
 
 export type SessionInfo = {
   id: string;
   directory: string;
   title: string;
-  sqliteFile: string;
+  sqliteFile?: string;
   tables: string[];
+  workspace?: WorkspaceInfo;
 };
 
 export type SessionTodo = Record<string, unknown>;
@@ -38,6 +49,36 @@ async function findSqliteFiles(dir: string): Promise<string[]> {
   } catch {
     return [];
   }
+}
+
+async function readWorkspaceYaml(dir: string): Promise<WorkspaceInfo | undefined> {
+  const yamlPath = path.join(dir, "workspace.yml");
+  try {
+    const content = await fs.readFile(yamlPath, "utf8");
+    const parsed = yaml.load(content);
+    if (parsed && typeof parsed === "object" && "id" in parsed) {
+      const obj = parsed as Record<string, unknown>;
+      const rawId = obj.id;
+      if (typeof rawId !== "string" || rawId.trim() === "") {
+        return undefined;
+      }
+      const toISOString = (val: unknown): string => {
+        if (val instanceof Date) return val.toISOString();
+        return String(val ?? "");
+      };
+      return {
+        id: rawId,
+        cwd: String(obj.cwd ?? ""),
+        summary: String(obj.summary ?? ""),
+        summary_count: Number.isFinite(Number(obj.summary_count)) ? Number(obj.summary_count) : 0,
+        created_at: toISOString(obj.created_at),
+        updated_at: toISOString(obj.updated_at),
+      };
+    }
+  } catch {
+    // workspace.yml may not exist or may be unreadable
+  }
+  return undefined;
 }
 
 function readTables(dbPath: string): string[] {
@@ -89,15 +130,16 @@ export async function discoverSessions(
   const sessions: SessionInfo[] = [];
   for (const dir of sessionDirs) {
     const sqliteFiles = await findSqliteFiles(dir);
-    if (sqliteFiles.length === 0) {
+    const workspace = await readWorkspaceYaml(dir);
+    if (sqliteFiles.length === 0 && !workspace) {
       continue;
     }
     sqliteFiles.sort();
-    const sqliteFile = sqliteFiles[0];
-    const tables = readTables(sqliteFile);
+    const sqliteFile = sqliteFiles.length > 0 ? sqliteFiles[0] : undefined;
+    const tables = sqliteFile ? readTables(sqliteFile) : [];
     const dirName = path.basename(dir);
 
-    let title = dirName;
+    let title = workspace?.summary || dirName;
     try {
       const mdFiles = (await fs.readdir(dir))
         .filter((f) => f.toLowerCase().endsWith(".md"))
@@ -119,6 +161,7 @@ export async function discoverSessions(
       title,
       sqliteFile,
       tables,
+      workspace,
     });
   }
 
@@ -129,6 +172,7 @@ export function getSessionTableData(
   sessionInfo: SessionInfo,
   tableName: string
 ): SessionTodo[] {
+  if (!sessionInfo.sqliteFile) return [];
   return readTableRows(sessionInfo.sqliteFile, tableName, sessionInfo.tables);
 }
 
@@ -136,6 +180,7 @@ export function getAllSessionData(
   sessionInfo: SessionInfo
 ): Record<string, SessionTodo[]> {
   const result: Record<string, SessionTodo[]> = {};
+  if (!sessionInfo.sqliteFile || sessionInfo.tables.length === 0) return result;
   let db: Database.Database | undefined;
   try {
     db = new Database(sessionInfo.sqliteFile, { readonly: true, fileMustExist: true });
