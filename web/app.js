@@ -5,7 +5,10 @@ const currentFileEl = document.getElementById("current-file");
 const copyMdBtn = document.getElementById("copy-md");
 const pasteMdBtn = document.getElementById("paste-md");
 const downloadDocxBtn = document.getElementById("download-docx");
-const openDiffViewerBtn = document.getElementById("open-diff-viewer");
+const appMenuButton = document.getElementById("app-menu-button");
+const appMenuEl = document.getElementById("app-menu");
+const appMenuContainer = appMenuButton?.closest(".app-menu");
+const menuOpenDiffViewerBtn = document.getElementById("menu-open-diff-viewer");
 const saveBtn = document.getElementById("save-file");
 
 const turndownService = new window.TurndownService({
@@ -278,8 +281,35 @@ downloadDocxBtn.addEventListener("click", () => {
   window.location.href = `/api/files/${encodeURIComponent(selectedId)}/docx`;
 });
 
-openDiffViewerBtn.addEventListener("click", () => {
-  window.open("/diff/", "_blank", "noopener,noreferrer");
+function setAppMenuOpen(isOpen) {
+  appMenuEl.hidden = !isOpen;
+  appMenuButton.setAttribute("aria-expanded", String(isOpen));
+}
+
+function openDiffViewerWindow() {
+  const diffWindow = window.open(
+    "/diff/",
+    "_blank",
+    "popup=yes,menubar=no,toolbar=no,location=no,status=no,scrollbars=yes,resizable=yes,width=1200,height=800,noopener,noreferrer",
+  );
+  diffWindow?.focus();
+}
+
+appMenuButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  const isOpen = appMenuEl.hidden === false;
+  setAppMenuOpen(!isOpen);
+});
+
+menuOpenDiffViewerBtn.addEventListener("click", () => {
+  setAppMenuOpen(false);
+  openDiffViewerWindow();
+});
+
+document.addEventListener("click", (event) => {
+  if (!appMenuContainer?.contains(event.target)) {
+    setAppMenuOpen(false);
+  }
 });
 
 saveBtn.addEventListener("click", async () => {
@@ -346,6 +376,10 @@ searchInputEl.addEventListener("input", (event) => {
 });
 
 document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && appMenuEl.hidden === false) {
+    setAppMenuOpen(false);
+    return;
+  }
   if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "s") {
     return;
   }

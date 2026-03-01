@@ -18,11 +18,32 @@
           <div class="toolbar">
             <span id="current-file"></span>
             <div id="toolbar-actions">
-              <button id="open-diff-viewer">View Git Diff</button>
               <button id="save-file" disabled>Save</button>
               <button id="copy-md" disabled>Copy to Clipboard</button>
               <button id="paste-md" disabled>Paste MD</button>
               <button id="download-docx" disabled>Download as DOCX</button>
+              <div class="app-menu">
+                <button
+                  id="app-menu-button"
+                  type="button"
+                  class="icon-button"
+                  aria-label="Open app menu"
+                  aria-haspopup="menu"
+                  aria-expanded="false"
+                >
+                  <span class="app-grid-icon" aria-hidden="true">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </span>
+                </button>
+                <div id="app-menu" class="menu-popup" role="menu" hidden>
+                  <button id="menu-open-diff-viewer" type="button" class="menu-item" role="menuitem">
+                    View Git Diff
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         <article id="editor" contenteditable="false" aria-label="Markdown editor" spellcheck="true">
