@@ -2,6 +2,7 @@ const sessionListEl = document.getElementById("session-list");
 const dataViewEl = document.getElementById("data-view");
 const currentSessionEl = document.getElementById("current-session");
 const tableSelectEl = document.getElementById("table-select");
+const refreshTodosBtn = document.getElementById("refresh-todos");
 
 let sessions = [];
 let selectedSessionId = null;
@@ -163,6 +164,10 @@ tableSelectEl.addEventListener("change", async () => {
   if (selectedSessionId) {
     await loadSessionData(selectedSessionId);
   }
+});
+
+refreshTodosBtn.addEventListener("click", () => {
+  void refreshSessions();
 });
 
 void refreshSessions();

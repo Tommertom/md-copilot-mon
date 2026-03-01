@@ -8,13 +8,24 @@ const downloadDocxBtn = document.getElementById("download-docx");
 const appMenuButton = document.getElementById("app-menu-button");
 const appMenuEl = document.getElementById("app-menu");
 const appMenuContainer = appMenuButton?.closest(".app-menu");
+const menuOpenMainPopoutBtn = document.getElementById("menu-open-main-popout");
 const menuOpenDiffViewerBtn = document.getElementById("menu-open-diff-viewer");
 const menuOpenTodosBtn = document.getElementById("menu-open-todos");
+const menuOpenEventsBtn = document.getElementById("menu-open-events");
+const menuOpenSessionFilesBtn = document.getElementById(
+  "menu-open-session-files",
+);
+const menuOpenSessionCheckpointsBtn = document.getElementById(
+  "menu-open-session-checkpoints",
+);
+const menuOpenSessionResearchBtn = document.getElementById(
+  "menu-open-session-research",
+);
 const saveBtn = document.getElementById("save-file");
 
 const turndownService = new window.TurndownService({
   headingStyle: "atx",
-  codeBlockStyle: "fenced"
+  codeBlockStyle: "fenced",
 });
 
 turndownService.addRule("mermaid", {
@@ -28,7 +39,7 @@ turndownService.addRule("mermaid", {
     }
     const source = sourceElement.textContent.trim();
     return `\n\n\`\`\`mermaid\n${source}\n\`\`\`\n\n`;
-  }
+  },
 });
 
 let files = [];
@@ -69,7 +80,9 @@ function setCurrentFileLabel(displayPath) {
 }
 
 function updateSaveButtonState() {
-  const hasChanges = normalizeMarkdown(getEditorMarkdown()) !== normalizeMarkdown(loadedMarkdown);
+  const hasChanges =
+    normalizeMarkdown(getEditorMarkdown()) !==
+    normalizeMarkdown(loadedMarkdown);
   saveBtn.disabled = isSaving || !selectedId || !hasChanges;
 }
 
@@ -77,8 +90,11 @@ function renderList() {
   fileListEl.innerHTML = "";
   const query = searchQuery.toLowerCase();
   const visibleFiles = query
-    ? files.filter((file) =>
-      file.path.toLowerCase().includes(query) || (file.title || "").toLowerCase().includes(query))
+    ? files.filter(
+        (file) =>
+          file.path.toLowerCase().includes(query) ||
+          (file.title || "").toLowerCase().includes(query),
+      )
     : files;
   for (const file of visibleFiles) {
     const li = document.createElement("li");
@@ -184,8 +200,11 @@ async function refreshFiles() {
   }
   renderList();
   if (selectedId) {
-    const hasUnsavedChanges = normalizeMarkdown(getEditorMarkdown()) !== normalizeMarkdown(loadedMarkdown);
-    const shouldReloadFromServer = !hasUnsavedChanges || loadedId !== selectedId;
+    const hasUnsavedChanges =
+      normalizeMarkdown(getEditorMarkdown()) !==
+      normalizeMarkdown(loadedMarkdown);
+    const shouldReloadFromServer =
+      !hasUnsavedChanges || loadedId !== selectedId;
     if (shouldReloadFromServer) {
       await loadPreview(selectedId);
     }
@@ -235,7 +254,9 @@ copyMdBtn.addEventListener("click", async () => {
     await navigator.clipboard.writeText(getEditorMarkdown());
   } catch (error) {
     console.error("Failed to copy markdown to clipboard", error);
-    alert("Failed to copy markdown to clipboard. Check browser clipboard permissions and try again.");
+    alert(
+      "Failed to copy markdown to clipboard. Check browser clipboard permissions and try again.",
+    );
   }
 });
 
@@ -273,7 +294,9 @@ pasteMdBtn.addEventListener("click", async () => {
     updateSaveButtonState();
   } catch (error) {
     console.error("Failed to paste markdown from clipboard", error);
-    alert("Failed to paste markdown from clipboard. Check clipboard permissions and verify clipboard text content.");
+    alert(
+      "Failed to paste markdown from clipboard. Check clipboard permissions and verify clipboard text content.",
+    );
   }
 });
 
@@ -287,28 +310,57 @@ function setAppMenuOpen(isOpen) {
   appMenuButton.setAttribute("aria-expanded", String(isOpen));
 }
 
+// Helper that opens a new window for a subapp with the
+// same set of features used everywhere.  The important part
+// for this change is the addition of `locationbar=no` so that
+// the address/URL bar is not displayed if the browser honors
+// the feature flag.  All callers should use this helper so the
+// behaviour stays consistent across the different subapps.
+function openSubappWindow(path) {
+  const features =
+    "popup=yes,menubar=no,toolbar=no,location=no,locationbar=no,status=no,scrollbars=yes,resizable=yes,width=1200,height=800,noopener,noreferrer";
+  const win = window.open(path, "_blank", features);
+  win?.focus();
+  return win;
+}
+
 function openDiffViewerWindow() {
-  const diffWindow = window.open(
-    "/diff/",
-    "_blank",
-    "popup=yes,menubar=no,toolbar=no,location=no,status=no,scrollbars=yes,resizable=yes,width=1200,height=800,noopener,noreferrer",
-  );
-  diffWindow?.focus();
+  openSubappWindow("/diff/");
+}
+
+function openMainAppPopoutWindow() {
+  openSubappWindow(window.location.href);
 }
 
 function openTodosWindow() {
-  const todosWindow = window.open(
-    "/todos/",
-    "_blank",
-    "popup=yes,menubar=no,toolbar=no,location=no,status=no,scrollbars=yes,resizable=yes,width=1200,height=800,noopener,noreferrer",
-  );
-  todosWindow?.focus();
+  openSubappWindow("/todos/");
+}
+
+function openEventsWindow() {
+  openSubappWindow("/events/");
+}
+
+function openSessionFilesWindow() {
+  openSubappWindow("/session-files/");
+}
+
+function openSessionCheckpointsWindow() {
+  openSubappWindow("/session-checkpoints/");
+}
+
+function openSessionResearchWindow() {
+  openSubappWindow("/session-research/");
 }
 
 appMenuButton.addEventListener("click", (event) => {
   event.stopPropagation();
   const isOpen = appMenuEl.hidden === false;
   setAppMenuOpen(!isOpen);
+});
+
+menuOpenMainPopoutBtn.addEventListener("click", () => {
+  setAppMenuOpen(false);
+  openMainAppPopoutWindow();
 });
 
 menuOpenDiffViewerBtn.addEventListener("click", () => {
@@ -319,6 +371,26 @@ menuOpenDiffViewerBtn.addEventListener("click", () => {
 menuOpenTodosBtn.addEventListener("click", () => {
   setAppMenuOpen(false);
   openTodosWindow();
+});
+
+menuOpenEventsBtn.addEventListener("click", () => {
+  setAppMenuOpen(false);
+  openEventsWindow();
+});
+
+menuOpenSessionFilesBtn.addEventListener("click", () => {
+  setAppMenuOpen(false);
+  openSessionFilesWindow();
+});
+
+menuOpenSessionCheckpointsBtn.addEventListener("click", () => {
+  setAppMenuOpen(false);
+  openSessionCheckpointsWindow();
+});
+
+menuOpenSessionResearchBtn.addEventListener("click", () => {
+  setAppMenuOpen(false);
+  openSessionResearchWindow();
 });
 
 document.addEventListener("click", (event) => {
@@ -338,7 +410,7 @@ saveBtn.addEventListener("click", async () => {
     const res = await fetch(`/api/files/${encodeURIComponent(savingId)}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ markdown, baseMarkdown })
+      body: JSON.stringify({ markdown, baseMarkdown }),
     });
     if (res.status === 409) {
       let errorData;
@@ -346,12 +418,19 @@ saveBtn.addEventListener("click", async () => {
         errorData = await res.json();
       } catch (error) {
         console.error("Failed to parse conflict response JSON", error);
-        alert("Conflict detected, but failed to load latest file content from server.");
+        alert(
+          "Conflict detected, but failed to load latest file content from server.",
+        );
         return;
       }
-      const reloadTheirs = window.confirm("This file was modified on disk. Click OK to load the server version (your edits will be lost), or Cancel to keep editing your current version.");
+      const reloadTheirs = window.confirm(
+        "This file was modified on disk. Click OK to load the server version (your edits will be lost), or Cancel to keep editing your current version.",
+      );
       if (reloadTheirs) {
-        if (typeof errorData.markdown !== "string" || typeof errorData.html !== "string") {
+        if (
+          typeof errorData.markdown !== "string" ||
+          typeof errorData.html !== "string"
+        ) {
           alert("Failed to reload latest file content.");
           return;
         }
@@ -364,13 +443,18 @@ saveBtn.addEventListener("click", async () => {
     }
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
-      const details = errorData.error ? `: ${errorData.error}` : ` (HTTP ${res.status})`;
+      const details = errorData.error
+        ? `: ${errorData.error}`
+        : ` (HTTP ${res.status})`;
       alert(`Failed to save file${details}`);
       return;
     }
     const data = await res.json();
     loadedMarkdown = data.markdown;
-    if (selectedId === savingId && normalizeMarkdown(getEditorMarkdown()) === normalizeMarkdown(markdown)) {
+    if (
+      selectedId === savingId &&
+      normalizeMarkdown(getEditorMarkdown()) === normalizeMarkdown(markdown)
+    ) {
       setEditorHtml(data.html);
       await renderMermaidInEditor();
     }

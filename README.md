@@ -24,6 +24,8 @@ npx md-copilot-viewer
 *   Automatically surfaces plans generated in Copilot plan mode.
 *   Copy rendered editor content as raw markdown to the clipboard, and paste markdown from the clipboard back into the editor.
 *   Optional DOCX export for sharing notes outside the app.
+*   Built-in popup tools for Pop Out, Git Diff, Todos, Events, Session Files, and Session Research monitoring.
+*   Events viewer caches loaded sessions/events in-browser and only refetches when **Refresh** is clicked.
 
 ## How it works
 
@@ -48,6 +50,14 @@ On first start, the app creates `.env-md-copilot-viewer` from `.env.template` if
 
 *   `http://localhost:3011` (default), or
 *   `http://localhost:<your PORT value>`
+
+Extra subapps:
+
+*   `http://localhost:<port>/diff/` for git diff rendering
+*   `http://localhost:<port>/todos/` for session todo tables
+*   `http://localhost:<port>/events/` for session `events.jsonl` inspection
+*   `http://localhost:<port>/session-files/` for per-session files in `~/.copilot/session-data/files`
+*   `http://localhost:<port>/session-research/` for per-session files in `~/.copilot/session-data/research`
 
 ## `.env-md-copilot-viewer` config
 
@@ -89,3 +99,22 @@ FILE_MAX_LIMIT=20
     Downloads the selected markdown file as `.docx`.
 *   `GET /api/changes`  
     Server-Sent Events stream that notifies the web app when markdown files change.
+*   `GET /api/sessions`  
+    Returns discovered Copilot sessions with metadata, ordered by the same recency order used in the main app file list.  
+    Includes `order` (0-based display index in that ordering).
+*   `GET /api/sessions/:id`  
+    Returns all SQL tables and rows for one session.
+*   `GET /api/sessions/:id/:table`  
+    Returns rows for one specific session table.
+*   `GET /api/sessions/:id/events`  
+    Returns parsed `events.jsonl` lines for a session as a JSON array.
+*   `GET /api/sessions/:id/files`  
+    Returns `{ directory, files }` where `files` includes session file metadata (`path`, `size`, `mtimeMs`) from `~/.copilot/session-data/files`.
+*   `GET /api/sessions/:id/files/download?path=<relative-path>`  
+    Downloads one file from the selected session files directory.
+*   `GET /api/sessions/:id/research`  
+    Returns `{ directory, files }` where `files` includes research file metadata (`path`, `size`, `mtimeMs`) from `~/.copilot/session-data/research`.
+*   `GET /api/sessions/:id/research/download?path=<relative-path>`  
+    Downloads one file from the selected session research directory.
+*   `GET /api/session-changes`  
+    Server-Sent Events stream for session-state updates (used by Todos/Events apps).

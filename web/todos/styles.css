@@ -14,6 +14,14 @@ body { margin: 0; height: 100vh; overflow: hidden; font-family: Arial, sans-seri
 #toolbar-actions { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 #current-session { flex: 1; min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
 #table-select { padding: 6px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+#refresh-todos {
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+#refresh-todos:hover { background: #f1f3f4; }
 .back-link { font-size: 13px; color: #0066cc; text-decoration: none; white-space: nowrap; }
 .back-link:hover { text-decoration: underline; }
 #data-view { flex: 1; min-height: 0; padding: 20px; overflow: auto; }

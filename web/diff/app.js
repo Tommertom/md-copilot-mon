@@ -1,26 +1,212 @@
+const sessionListEl = document.getElementById("session-list");
+const currentSessionEl = document.getElementById("current-session");
+const currentSessionFolderEl = document.getElementById("current-session-folder");
 const statusEl = document.getElementById("status");
 const outputEl = document.getElementById("diff-output");
+const refreshDiffBtn = document.getElementById("refresh-diff");
+const commitMessageEl = document.getElementById("commit-message");
+const commitDiffBtn = document.getElementById("commit-diff");
 
-async function loadDiff() {
+let sessions = [];
+let selectedSessionId = null;
+
+function renderSessionList() {
+  sessionListEl.innerHTML = "";
+  for (const session of sessions) {
+    const li = document.createElement("li");
+    li.className = selectedSessionId === session.id ? "active" : "";
+    const label = document.createElement("div");
+    label.className = "session-item-label";
+    const title = document.createElement("span");
+    title.className = "session-item-title";
+    title.textContent = session.title || session.directory;
+    const dirPath = document.createElement("span");
+    dirPath.className = "session-item-path";
+    dirPath.textContent = session.directory;
+    label.append(title, dirPath);
+    li.appendChild(label);
+    li.setAttribute("tabindex", "0");
+    li.setAttribute("role", "button");
+    li.addEventListener("click", () => selectSession(session.id));
+    li.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        void selectSession(session.id);
+      }
+    });
+    sessionListEl.appendChild(li);
+  }
+}
+
+function showStatus(text) {
+  statusEl.hidden = false;
+  statusEl.textContent = text;
+}
+
+function setCommitControlsEnabled(enabled) {
+  commitMessageEl.disabled = !enabled;
+  commitDiffBtn.disabled = !enabled;
+}
+
+async function loadDiff(sessionId) {
+  const session = sessions.find((item) => item.id === sessionId);
+  currentSessionEl.textContent = session?.title || session?.directory || "Session";
+  currentSessionFolderEl.textContent = "";
+  showStatus("Loading git diff...");
+  outputEl.innerHTML = "";
   try {
-    const response = await fetch("/api/git-diff");
+    const response = await fetch(`/api/git-diff?sessionId=${encodeURIComponent(sessionId)}`);
     if (!response.ok) {
-      throw new Error(`Failed to load git diff (HTTP ${response.status})`);
+      const payload = await response.json().catch(() => ({}));
+      const message = payload && typeof payload.error === "string"
+        ? payload.error
+        : `Failed to load git diff (HTTP ${response.status})`;
+      throw new Error(message);
     }
     const data = await response.json();
-    if (!data.diff.trim()) {
-      statusEl.textContent = "No local git diff changes found.";
+    currentSessionFolderEl.textContent = typeof data.diffDirectory === "string" ? data.diffDirectory : "";
+    if (typeof data.diff !== "string" || !data.diff.trim()) {
+      showStatus("No local git diff changes found.");
       return;
     }
-    statusEl.remove();
+    statusEl.hidden = true;
     outputEl.innerHTML = window.Diff2Html.html(data.diff, {
       drawFileList: true,
       matching: "lines",
       outputFormat: "side-by-side"
     });
   } catch (error) {
-    statusEl.textContent = `Failed to load git diff: ${error.message}`;
+    outputEl.innerHTML = "";
+    showStatus(`Failed to load git diff: ${error.message}`);
   }
 }
 
-void loadDiff();
+async function refreshSessions() {
+  try {
+    const res = await fetch("/api/sessions");
+    if (!res.ok) {
+      console.error("Failed to load sessions: HTTP", res.status);
+      sessions = [];
+    } else {
+      const data = await res.json();
+      sessions = Array.isArray(data) ? data : [];
+    }
+  } catch (error) {
+    console.error("Failed to load sessions:", error);
+    sessions = [];
+  }
+
+  if (selectedSessionId && !sessions.some((s) => s.id === selectedSessionId)) {
+    selectedSessionId = null;
+  }
+  renderSessionList();
+  if (selectedSessionId) {
+    setCommitControlsEnabled(true);
+    await loadDiff(selectedSessionId);
+  } else {
+    setCommitControlsEnabled(false);
+    currentSessionEl.textContent = "Select a session to view git diff";
+    currentSessionFolderEl.textContent = "";
+    outputEl.innerHTML = "";
+    showStatus("Select a session from the sidebar to inspect git diff.");
+  }
+}
+
+async function selectSession(sessionId) {
+  const previousSession = sessions.find((item) => item.id === selectedSessionId);
+  const nextSession = sessions.find((item) => item.id === sessionId);
+  selectedSessionId = sessionId;
+  renderSessionList();
+  setCommitControlsEnabled(true);
+  currentSessionEl.textContent = nextSession?.title || nextSession?.directory || "Session";
+  const previousCwd = typeof previousSession?.workspace?.cwd === "string" ? previousSession.workspace.cwd.trim() : "";
+  const nextCwd = typeof nextSession?.workspace?.cwd === "string" ? nextSession.workspace.cwd.trim() : "";
+  if (
+    previousSession &&
+    previousSession.id !== sessionId &&
+    previousCwd &&
+    previousCwd === nextCwd
+  ) {
+    return;
+  }
+  await loadDiff(sessionId);
+}
+
+async function commitDiffChanges() {
+  if (!selectedSessionId) {
+    showStatus("Select a session before committing.");
+    return;
+  }
+  const message = commitMessageEl.value.trim();
+  if (!message) {
+    showStatus("Enter a commit message.");
+    commitMessageEl.focus();
+    return;
+  }
+  commitDiffBtn.disabled = true;
+  showStatus("Running git commit...");
+  try {
+    const response = await fetch("/api/git-commit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId: selectedSessionId, message })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const errorMessage = payload && typeof payload.error === "string"
+        ? payload.error
+        : `Failed to commit changes (HTTP ${response.status})`;
+      throw new Error(errorMessage);
+    }
+    commitMessageEl.value = "";
+    showStatus(typeof payload.message === "string" ? payload.message : "Commit created successfully.");
+    await loadDiff(selectedSessionId);
+  } catch (error) {
+    showStatus(`Failed to commit changes: ${error.message}`);
+  } finally {
+    commitDiffBtn.disabled = !selectedSessionId;
+  }
+}
+
+refreshDiffBtn.addEventListener("click", () => {
+  void refreshSessions();
+});
+commitDiffBtn.addEventListener("click", () => {
+  void commitDiffChanges();
+});
+commitMessageEl.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    void commitDiffChanges();
+  }
+});
+
+setCommitControlsEnabled(false);
+
+void refreshSessions();
+
+let reconnectTimer = null;
+let refreshDebounceTimer = null;
+
+function connectSessionChangeEvents() {
+  const events = new EventSource("/api/session-changes");
+  events.onmessage = () => {
+    if (refreshDebounceTimer !== null) {
+      clearTimeout(refreshDebounceTimer);
+    }
+    refreshDebounceTimer = setTimeout(() => {
+      refreshDebounceTimer = null;
+      void refreshSessions();
+    }, 200);
+  };
+  events.onerror = () => {
+    events.close();
+    if (reconnectTimer) return;
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      connectSessionChangeEvents();
+    }, 1000);
+  };
+}
+
+connectSessionChangeEvents();

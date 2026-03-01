@@ -63,6 +63,9 @@ body { margin: 0; height: 100vh; overflow: hidden; font-family: Arial, sans-seri
   cursor: pointer;
 }
 .menu-item:hover, .menu-item:focus-visible { background: #eef4ff; outline: none; }
+.menu-item-content { display: flex; align-items: center; gap: 8px; width: 100%; }
+.menu-item-icon { display: inline-flex; width: 14px; height: 14px; color: #5f6368; flex: 0 0 auto; margin-left: auto; }
+.menu-item-icon svg { width: 100%; height: 100%; display: block; fill: currentColor; }
 #editor { flex: 1; min-height: 0; padding: 20px; overflow: auto; outline: none; }
 #editor[contenteditable="false"] { color: #666; background: #fafafa; }
 #current-file { flex: 1; min-width: 0; overflow-wrap: anywhere; }
@@ -71,3 +74,14 @@ body { margin: 0; height: 100vh; overflow: hidden; font-family: Arial, sans-seri
 #editor th, #editor td { border: 1px solid #ccc; padding: 8px; }
 #editor .mermaid-wrapper { background: #fff; padding: 8px; border: 1px solid #ddd; border-radius: 6px; }
 #editor .mermaid-source { display: none; }
+
+@media (max-width: 1099px) {
+  .toolbar { flex-direction: column; align-items: flex-start; }
+  #current-file { width: 100%; }
+  #toolbar-actions {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}

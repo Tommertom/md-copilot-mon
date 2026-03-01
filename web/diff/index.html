@@ -8,11 +8,29 @@
     <link rel="stylesheet" href="/diff/styles.css" />
   </head>
   <body>
-    <main>
-      <h1>Git Diff</h1>
-      <div id="status">Loading git diff...</div>
-      <div id="diff-output"></div>
-    </main>
+    <div class="app">
+      <aside class="sidebar">
+        <h2>Git Diff</h2>
+        <ul id="session-list"></ul>
+      </aside>
+      <main class="content">
+        <div class="toolbar">
+          <div id="current-session-meta">
+            <span id="current-session">Select a session to view git diff</span>
+            <span id="current-session-folder"></span>
+          </div>
+          <div id="toolbar-actions">
+            <input id="commit-message" type="text" placeholder="Commit message" />
+            <button id="commit-diff" type="button">Commit</button>
+            <button id="refresh-diff" type="button">Refresh</button>
+          </div>
+        </div>
+        <div id="data-view">
+          <div id="status" class="placeholder">Select a session from the sidebar to inspect git diff.</div>
+          <div id="diff-output"></div>
+        </div>
+      </main>
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html.min.js"></script>
     <script type="module" src="/diff/app.js"></script>
   </body>

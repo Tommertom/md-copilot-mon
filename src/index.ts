@@ -10,7 +10,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { markdownToDocx, renderMarkdown } from "./markdown.js";
-import { discoverSessions, getAllSessionData, getSessionTableData, type SessionInfo, type WorkspaceInfo } from "./session-store.js";
+import { discoverSessions, getAllSessionData, getSessionEvents, getSessionTableData, type SessionInfo, type WorkspaceInfo } from "./session-store.js";
 import { defaultRoots, MarkdownIndex } from "./watcher.js";
 
 const ENV_FILE_NAME = ".env-md-copilot-viewer";
@@ -87,6 +87,94 @@ function toSafeAttachmentFileName(fileName: string): string {
   return `${stem || "download"}${extension ? `.${extension}` : ""}`;
 }
 
+type SessionFileEntry = {
+  path: string;
+  size: number;
+  mtimeMs: number;
+};
+
+function getSessionFileDirCandidates(session: SessionInfo): string[] {
+  const candidates = [path.basename(session.directory)];
+  const workspaceId = session.workspace?.id?.trim();
+  if (workspaceId) {
+    candidates.unshift(workspaceId);
+  }
+  return [...new Set(candidates.filter((candidate) => candidate.length > 0))];
+}
+
+async function resolveSessionDataDir(session: SessionInfo, subDir: string): Promise<string | null> {
+  const sessionDataRoot = path.join(os.homedir(), ".copilot", "session-data", subDir);
+  for (const candidate of getSessionFileDirCandidates(session)) {
+    const candidateDir = path.join(sessionDataRoot, candidate);
+    try {
+      const stat = await fs.stat(candidateDir);
+      if (stat.isDirectory()) {
+        return candidateDir;
+      }
+    } catch (error) {
+      const fsError = error as NodeJS.ErrnoException;
+      if (fsError.code !== "ENOENT") {
+        throw error;
+      }
+    }
+  }
+  return null;
+}
+
+function resolveSessionFileDir(session: SessionInfo): Promise<string | null> {
+  return resolveSessionDataDir(session, "files");
+}
+
+function resolveSessionResearchDir(session: SessionInfo): Promise<string | null> {
+  return resolveSessionDataDir(session, "research");
+}
+
+function resolveSessionCheckpointsDir(session: SessionInfo): Promise<string | null> {
+  return resolveSessionDataDir(session, "checkpoints");
+}
+
+function toPosixRelativePath(filePath: string): string {
+  return filePath.split(path.sep).join("/");
+}
+
+async function collectSessionFiles(
+  currentDir: string,
+  rootDir: string,
+  files: SessionFileEntry[]
+): Promise<void> {
+  const entries = await fs.readdir(currentDir, { withFileTypes: true });
+  entries.sort((a, b) => a.name.localeCompare(b.name));
+  for (const entry of entries) {
+    const fullPath = path.join(currentDir, entry.name);
+    if (entry.isDirectory()) {
+      await collectSessionFiles(fullPath, rootDir, files);
+      continue;
+    }
+    if (!entry.isFile()) {
+      continue;
+    }
+    const stat = await fs.stat(fullPath);
+    files.push({
+      path: toPosixRelativePath(path.relative(rootDir, fullPath)),
+      size: stat.size,
+      mtimeMs: stat.mtimeMs
+    });
+  }
+}
+
+function resolveSessionDownloadPath(sessionFileDir: string, relativePath: string): string | null {
+  const requestedPath = relativePath.trim();
+  if (!requestedPath) {
+    return null;
+  }
+  const absolutePath = path.resolve(sessionFileDir, requestedPath);
+  const relativeToBase = path.relative(sessionFileDir, absolutePath);
+  if (relativeToBase.startsWith("..") || path.isAbsolute(relativeToBase)) {
+    return null;
+  }
+  return absolutePath;
+}
+
 const app = express();
 const port = Number(process.env.PORT || 3011);
 const autoIncrementPort = process.env.AUTO_INCREMENT_PORT !== "false";
@@ -116,6 +204,36 @@ const gitDiffRateLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: "Too many git diff requests, please retry shortly" }
 });
+const gitCommitRateLimiter = rateLimit({
+  windowMs: 10_000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many git commit requests, please retry shortly" }
+});
+
+function createHttpError(httpStatus: number, message: string): Error & { httpStatus: number } {
+  const error = new Error(message) as Error & { httpStatus: number };
+  error.httpStatus = httpStatus;
+  return error;
+}
+
+async function resolveGitCwd(sessionIdRaw: string | undefined): Promise<string> {
+  const sessionId = sessionIdRaw?.trim() || "";
+  if (!sessionId) {
+    return cwd;
+  }
+  const sessions = await getCachedSessions();
+  const session = sessions.find((s) => s.id === sessionId);
+  if (!session) {
+    throw createHttpError(404, "Session not found");
+  }
+  const sessionCwd = session.workspace?.cwd?.trim();
+  if (!sessionCwd) {
+    throw createHttpError(400, "Session workspace cwd not found");
+  }
+  return sessionCwd;
+}
 
 app.use(express.json({ limit: "5mb" }));
 app.use(express.static(webDir));
@@ -127,17 +245,60 @@ app.get("/api/files", (_req, res) => {
   })));
 });
 
-app.get("/api/git-diff", gitDiffRateLimiter, async (_req, res) => {
+app.get("/api/git-diff", gitDiffRateLimiter, async (req, res) => {
   // Prevent caching of potentially sensitive git diff data
   res.set({
     "Cache-Control": "no-store, no-cache, must-revalidate",
     Pragma: "no-cache"
   });
   try {
-    const { stdout } = await execFileAsync("git", ["diff", "--no-color"], { cwd, maxBuffer: 5 * 1024 * 1024, encoding: "utf8" });
-    res.json({ diff: stdout });
+    const sessionId = typeof req.query.sessionId === "string" ? req.query.sessionId : undefined;
+    const diffCwd = await resolveGitCwd(sessionId);
+    const { stdout } = await execFileAsync("git", ["diff", "--no-color"], { cwd: diffCwd, maxBuffer: 5 * 1024 * 1024, encoding: "utf8" });
+    res.json({ diff: stdout, diffDirectory: toDisplayPath(diffCwd) });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    const typedError = error as Error & { httpStatus?: number };
+    res.status(typedError.httpStatus ?? 500).json({ error: typedError.message });
+  }
+});
+
+app.post("/api/git-commit", gitCommitRateLimiter, async (req, res) => {
+  const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
+  if (!message) {
+    res.status(400).json({ error: "Commit message is required" });
+    return;
+  }
+  try {
+    const sessionId = typeof req.body?.sessionId === "string" ? req.body.sessionId : undefined;
+    const diffCwd = await resolveGitCwd(sessionId);
+    const { stdout } = await execFileAsync("git", ["commit", "-am", message], {
+      cwd: diffCwd,
+      maxBuffer: 5 * 1024 * 1024,
+      encoding: "utf8"
+    });
+    res.json({
+      message: "Commit created successfully",
+      output: stdout,
+      diffDirectory: toDisplayPath(diffCwd)
+    });
+  } catch (error) {
+    const typedError = error as NodeJS.ErrnoException & {
+      stdout?: string;
+      stderr?: string;
+      httpStatus?: number;
+    };
+    if (typeof typedError.httpStatus === "number") {
+      res.status(typedError.httpStatus).json({ error: typedError.message });
+      return;
+    }
+    if (typeof typedError.code === "number") {
+      const output = [typedError.stderr, typedError.stdout]
+        .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+        .join("\n");
+      res.status(400).json({ error: output || typedError.message });
+      return;
+    }
+    res.status(500).json({ error: typedError.message });
   }
 });
 
@@ -257,7 +418,7 @@ index.onChange(() => {
 
 async function getCachedSessions(): Promise<SessionInfo[]> {
   if (!sessionCache) {
-    sessionCache = await discoverSessions(index.paths());
+    sessionCache = await discoverSessions(index.list().map((entry) => entry.path));
   }
   return sessionCache;
 }
@@ -266,12 +427,13 @@ app.get("/api/sessions", async (_req, res) => {
   try {
     const sessions = await getCachedSessions();
     res.json(
-      sessions.map((s) => ({
+      sessions.map((s, order) => ({
         id: s.id,
         title: s.title,
         directory: toDisplayPath(s.directory),
         tables: s.tables,
-        workspace: s.workspace
+        workspace: s.workspace,
+        order
       }))
     );
   } catch (error) {
@@ -298,6 +460,220 @@ app.get("/api/sessions/:id", async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+app.get("/api/sessions/:id/events", async (req, res) => {
+  try {
+    const sessions = await getCachedSessions();
+    const session = sessions.find((s) => s.id === req.params.id);
+    if (!session) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
+    const events = await getSessionEvents(session);
+    res.json(events);
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+app.get("/api/sessions/:id/files", async (req, res) => {
+  try {
+    const sessions = await getCachedSessions();
+    const session = sessions.find((s) => s.id === req.params.id);
+    if (!session) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
+    const sessionFileDir = await resolveSessionFileDir(session);
+    if (!sessionFileDir) {
+      res.json({ directory: "", files: [] });
+      return;
+    }
+    const files: SessionFileEntry[] = [];
+    await collectSessionFiles(sessionFileDir, sessionFileDir, files);
+    files.sort((a, b) => a.path.localeCompare(b.path));
+    res.json({
+      directory: toDisplayPath(sessionFileDir),
+      files
+    });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+app.get("/api/sessions/:id/files/download", async (req, res) => {
+  try {
+    const sessions = await getCachedSessions();
+    const session = sessions.find((s) => s.id === req.params.id);
+    if (!session) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
+    const relativePath = typeof req.query.path === "string" ? req.query.path : "";
+    if (!relativePath) {
+      res.status(400).json({ error: "Missing file path" });
+      return;
+    }
+    const sessionFileDir = await resolveSessionFileDir(session);
+    if (!sessionFileDir) {
+      res.status(404).json({ error: "Session files directory not found" });
+      return;
+    }
+    const filePath = resolveSessionDownloadPath(sessionFileDir, relativePath);
+    if (!filePath) {
+      res.status(400).json({ error: "Invalid file path" });
+      return;
+    }
+    const stat = await fs.stat(filePath);
+    if (!stat.isFile()) {
+      res.status(404).json({ error: "File not found" });
+      return;
+    }
+    res.download(filePath, toSafeAttachmentFileName(path.basename(filePath)));
+  } catch (error) {
+    const fsError = error as NodeJS.ErrnoException;
+    if (fsError.code === "ENOENT") {
+      res.status(404).json({ error: "File not found" });
+      return;
+    }
+    res.status(500).json({ error: fsError.message });
+  }
+});
+
+app.get("/api/sessions/:id/research", async (req, res) => {
+  try {
+    const sessions = await getCachedSessions();
+    const session = sessions.find((s) => s.id === req.params.id);
+    if (!session) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
+    const sessionResearchDir = await resolveSessionResearchDir(session);
+    if (!sessionResearchDir) {
+      res.json({ directory: "", files: [] });
+      return;
+    }
+    const files: SessionFileEntry[] = [];
+    await collectSessionFiles(sessionResearchDir, sessionResearchDir, files);
+    files.sort((a, b) => a.path.localeCompare(b.path));
+    res.json({
+      directory: toDisplayPath(sessionResearchDir),
+      files
+    });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+app.get("/api/sessions/:id/research/download", async (req, res) => {
+  try {
+    const sessions = await getCachedSessions();
+    const session = sessions.find((s) => s.id === req.params.id);
+    if (!session) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
+    const relativePath = typeof req.query.path === "string" ? req.query.path : "";
+    if (!relativePath) {
+      res.status(400).json({ error: "Missing file path" });
+      return;
+    }
+    const sessionResearchDir = await resolveSessionResearchDir(session);
+    if (!sessionResearchDir) {
+      res.status(404).json({ error: "Session research directory not found" });
+      return;
+    }
+    const filePath = resolveSessionDownloadPath(sessionResearchDir, relativePath);
+    if (!filePath) {
+      res.status(400).json({ error: "Invalid file path" });
+      return;
+    }
+    const stat = await fs.stat(filePath);
+    if (!stat.isFile()) {
+      res.status(404).json({ error: "File not found" });
+      return;
+    }
+    res.download(filePath, toSafeAttachmentFileName(path.basename(filePath)));
+  } catch (error) {
+    const fsError = error as NodeJS.ErrnoException;
+    if (fsError.code === "ENOENT") {
+      res.status(404).json({ error: "File not found" });
+      return;
+    }
+    res.status(500).json({ error: fsError.message });
+  }
+});
+
+app.get("/api/sessions/:id/checkpoints", async (req, res) => {
+  try {
+    const sessions = await getCachedSessions();
+    const session = sessions.find((s) => s.id === req.params.id);
+    if (!session) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
+    const sessionCheckpointsDir = await resolveSessionCheckpointsDir(session);
+    if (!sessionCheckpointsDir) {
+      res.json({ directory: "", files: [] });
+      return;
+    }
+    const files: SessionFileEntry[] = [];
+    await collectSessionFiles(sessionCheckpointsDir, sessionCheckpointsDir, files);
+    const checkpointFiles = files.filter((file) => file.path.toLowerCase().endsWith(".json"));
+    checkpointFiles.sort((a, b) => a.path.localeCompare(b.path));
+    res.json({
+      directory: toDisplayPath(sessionCheckpointsDir),
+      files: checkpointFiles
+    });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+app.get("/api/sessions/:id/checkpoints/file", async (req, res) => {
+  try {
+    const sessions = await getCachedSessions();
+    const session = sessions.find((s) => s.id === req.params.id);
+    if (!session) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
+    const relativePath = typeof req.query.path === "string" ? req.query.path : "";
+    if (!relativePath) {
+      res.status(400).json({ error: "Missing file path" });
+      return;
+    }
+    const sessionCheckpointsDir = await resolveSessionCheckpointsDir(session);
+    if (!sessionCheckpointsDir) {
+      res.status(404).json({ error: "Session checkpoints directory not found" });
+      return;
+    }
+    const filePath = resolveSessionDownloadPath(sessionCheckpointsDir, relativePath);
+    if (!filePath) {
+      res.status(400).json({ error: "Invalid file path" });
+      return;
+    }
+    const relativeToBase = toPosixRelativePath(path.relative(sessionCheckpointsDir, filePath));
+    if (!relativeToBase.toLowerCase().endsWith(".json")) {
+      res.status(400).json({ error: "Only .json files are supported" });
+      return;
+    }
+    const stat = await fs.stat(filePath);
+    if (!stat.isFile()) {
+      res.status(404).json({ error: "File not found" });
+      return;
+    }
+    const content = await fs.readFile(filePath, "utf8");
+    res.json({ path: relativeToBase, content });
+  } catch (error) {
+    const fsError = error as NodeJS.ErrnoException;
+    if (fsError.code === "ENOENT") {
+      res.status(404).json({ error: "File not found" });
+      return;
+    }
+    res.status(500).json({ error: fsError.message });
   }
 });
 

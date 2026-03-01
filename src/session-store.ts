@@ -167,7 +167,7 @@ export async function discoverSessions(
     });
   }
 
-  return sessions.sort((a, b) => a.title.localeCompare(b.title));
+  return sessions;
 }
 
 export function getSessionTableData(
@@ -202,4 +202,32 @@ export function getAllSessionData(
     db?.close();
   }
   return result;
+}
+
+export async function getSessionEvents(
+  sessionInfo: SessionInfo
+): Promise<unknown[]> {
+  const eventsPath = path.join(sessionInfo.directory, "events.jsonl");
+  let content = "";
+  try {
+    content = await fs.readFile(eventsPath, "utf8");
+  } catch (error) {
+    const fsError = error as NodeJS.ErrnoException;
+    if (fsError.code === "ENOENT") {
+      return [];
+    }
+    throw error;
+  }
+
+  const lines = content
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  return lines.map((line, idx) => {
+    try {
+      return JSON.parse(line);
+    } catch {
+      throw new Error(`Invalid JSON in events.jsonl at line ${idx + 1}`);
+    }
+  });
 }
