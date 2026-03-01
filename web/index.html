@@ -5,48 +5,76 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Markdown Copilot Viewer</title>
     <link rel="stylesheet" href="/styles.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/katex.min.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/katex@0.16.25/dist/katex.min.css"
+    />
   </head>
   <body>
     <div class="app">
       <aside class="sidebar">
         <h2>Markdown files</h2>
-        <input id="file-search" type="text" placeholder="Search files..." aria-label="Search markdown files" />
+        <input
+          id="file-search"
+          type="text"
+          placeholder="Search files..."
+          aria-label="Search markdown files"
+        />
         <ul id="file-list"></ul>
       </aside>
       <main class="content">
-          <div class="toolbar">
-            <span id="current-file"></span>
-            <div id="toolbar-actions">
-              <button id="save-file" disabled>Save</button>
-              <button id="copy-md" disabled>Copy to Clipboard</button>
-              <button id="paste-md" disabled>Paste MD</button>
-              <button id="download-docx" disabled>Download as DOCX</button>
-              <div class="app-menu">
+        <div class="toolbar">
+          <span id="current-file"></span>
+          <div id="toolbar-actions">
+            <button id="save-file" disabled>Save</button>
+            <button id="copy-md" disabled>Copy MD</button>
+            <button id="paste-md" disabled>Paste MD</button>
+            <button id="download-docx" disabled>Download DOCX</button>
+            <div class="app-menu">
+              <button
+                id="app-menu-button"
+                type="button"
+                class="icon-button"
+                aria-label="Open app menu"
+                aria-haspopup="menu"
+                aria-expanded="false"
+              >
+                <span class="app-grid-icon" aria-hidden="true">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </span>
+              </button>
+              <div id="app-menu" class="menu-popup" role="menu" hidden>
                 <button
-                  id="app-menu-button"
+                  id="menu-open-diff-viewer"
                   type="button"
-                  class="icon-button"
-                  aria-label="Open app menu"
-                  aria-haspopup="menu"
-                  aria-expanded="false"
+                  class="menu-item"
+                  role="menuitem"
                 >
-                  <span class="app-grid-icon" aria-hidden="true">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                  </span>
+                  Git Diff
                 </button>
-                <div id="app-menu" class="menu-popup" role="menu" hidden>
-                  <button id="menu-open-diff-viewer" type="button" class="menu-item" role="menuitem">
-                    View Git Diff
-                  </button>
-                </div>
+                <button
+                  id="menu-open-todos"
+                  type="button"
+                  class="menu-item"
+                  role="menuitem"
+                >
+                  Todos
+                </button>
               </div>
             </div>
           </div>
-        <article id="editor" contenteditable="false" aria-label="Markdown editor" spellcheck="true">
+        </div>
+        <article
+          id="editor"
+          contenteditable="false"
+          aria-label="Markdown editor"
+          spellcheck="true"
+        >
           <p>Select a markdown file to edit...</p>
         </article>
       </main>

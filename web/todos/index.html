@@ -3,30 +3,29 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Copilot Session Monitor</title>
-    <link rel="stylesheet" href="/sessions/styles.css" />
+    <title>Copilot Todos Monitor</title>
+    <link rel="stylesheet" href="/todos/styles.css" />
   </head>
   <body>
     <div class="app">
       <aside class="sidebar">
-        <h2>Sessions</h2>
+        <h2>Todos</h2>
         <ul id="session-list"></ul>
       </aside>
       <main class="content">
         <div class="toolbar">
-          <span id="current-session">Select a session to view its data</span>
+          <span id="current-session">Select a todo session to view its data</span>
           <div id="toolbar-actions">
             <select id="table-select" disabled>
               <option value="">Select table</option>
             </select>
-            <a href="/" class="back-link">← Main Viewer</a>
           </div>
         </div>
         <div id="data-view">
-          <p class="placeholder">Select a session from the sidebar to inspect its internal state.</p>
+          <p class="placeholder">Select a todo session from the sidebar to inspect its internal state.</p>
         </div>
       </main>
     </div>
-    <script type="module" src="/sessions/app.js"></script>
+    <script type="module" src="/todos/app.js"></script>
   </body>
 </html>

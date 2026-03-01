@@ -19,26 +19,27 @@ body { margin: 0; height: 100vh; overflow: hidden; font-family: Arial, sans-seri
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  background: #fff;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #5f6368;
   cursor: pointer;
 }
-.icon-button:hover { background: #f8f8f8; }
+.icon-button:hover { background: #f1f3f4; }
 .icon-button:focus-visible { outline: 2px solid #4b8df8; outline-offset: 1px; }
 .app-grid-icon {
   display: grid;
-  grid-template-columns: repeat(2, 7px);
+  grid-template-columns: repeat(3, 4px);
   gap: 4px;
 }
 .app-grid-icon span {
   display: block;
-  width: 7px;
-  height: 7px;
-  border: 1px solid #555;
-  border-radius: 2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: currentColor;
 }
 .menu-popup {
   position: absolute;

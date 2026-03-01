@@ -9,6 +9,7 @@ const appMenuButton = document.getElementById("app-menu-button");
 const appMenuEl = document.getElementById("app-menu");
 const appMenuContainer = appMenuButton?.closest(".app-menu");
 const menuOpenDiffViewerBtn = document.getElementById("menu-open-diff-viewer");
+const menuOpenTodosBtn = document.getElementById("menu-open-todos");
 const saveBtn = document.getElementById("save-file");
 
 const turndownService = new window.TurndownService({
@@ -295,6 +296,15 @@ function openDiffViewerWindow() {
   diffWindow?.focus();
 }
 
+function openTodosWindow() {
+  const todosWindow = window.open(
+    "/todos/",
+    "_blank",
+    "popup=yes,menubar=no,toolbar=no,location=no,status=no,scrollbars=yes,resizable=yes,width=1200,height=800,noopener,noreferrer",
+  );
+  todosWindow?.focus();
+}
+
 appMenuButton.addEventListener("click", (event) => {
   event.stopPropagation();
   const isOpen = appMenuEl.hidden === false;
@@ -304,6 +314,11 @@ appMenuButton.addEventListener("click", (event) => {
 menuOpenDiffViewerBtn.addEventListener("click", () => {
   setAppMenuOpen(false);
   openDiffViewerWindow();
+});
+
+menuOpenTodosBtn.addEventListener("click", () => {
+  setAppMenuOpen(false);
+  openTodosWindow();
 });
 
 document.addEventListener("click", (event) => {
