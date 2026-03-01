@@ -385,14 +385,15 @@ async function start(): Promise<void> {
   if (autoIncrementPort && runningPort !== port) {
     console.log(`Requested port ${port} was in use, using port ${runningPort} instead.`);
   }
-  const startupUrl = `http://localhost:${runningPort}`;
-  console.log(`\n\x1b[1m\x1b[32mServer running on\x1b[0m \x1b[1m\x1b[4m\x1b[36m${startupUrl}\x1b[0m\n`);
-  console.log(`Config loaded from ${envFilePath}`);
+  console.log(`Config loaded from ${envFilePath}:\n`);
   console.log(`AUTO_INCREMENT_PORT=${String(autoIncrementPort)}`);
   console.log(`LOAD_EXISTING_MD=${String(loadExistingMd)}`);
   console.log(`EXCLUDE_PATTERN=${excludePatterns.join(",") || "(none)"}`);
   console.log(`FILE_MAX_LIMIT=${String(fileMaxLimit)}`);
-  console.log(`Watching roots:\n- ${roots.join("\n- ")}`);
+  console.log(`\nWatching roots:\n- ${roots.join("\n- ")}`);
+  const startupUrl = `http://localhost:${runningPort}`;
+  // final message should appear last so it's easy to spot and click
+  console.log(`\n\x1b[1m\x1b[32mServer running on\x1b[0m \x1b[1m\x1b[4m\x1b[36m${startupUrl}\x1b[0m\n`);
 }
 
 void start();
