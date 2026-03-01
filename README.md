@@ -36,7 +36,8 @@ On first start, the app creates `.env-md-copilot-viewer` from `.env.template` if
 1.  A Node watcher tracks markdown file changes (create/update) in realtime.
 2.  The backend serves a capped, recent file list plus rendered markdown content.
 3.  The backend pushes file-change events via SSE so the web UI refreshes list/preview automatically and supports DOCX export.
-4. The web UI provides a markdown editor with save button that sends updates back to the backend, which writes to disk and triggers file-change events for live refresh.
+4.  The main web UI provides a markdown editor with save button that sends updates back to the backend, which writes to disk and triggers file-change events for live refresh.
+5.  THere are also dedicated mini-app views for Git Diff, Todos, Events, Session Files, Session Research, and Session Checkpoints that fetch data from the backend on demand. The Events viewer caches loaded sessions/events in-browser and only refetches when **Refresh** is clicked.
 
 ## Screenshot - Agent HQ
 ![Screenshot 1 - Agent HQ](./screenshots/md-copilot-viewer.png)
