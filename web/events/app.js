@@ -134,9 +134,6 @@ function toTimelineEntry(event, toolNamesByCallId) {
   }
 
   if (type === "tool.execution_start") {
-    if (data.toolCallId) {
-      toolNamesByCallId.set(data.toolCallId, data.toolName || "unknown");
-    }
     return {
       type,
       time,
@@ -151,12 +148,23 @@ function toTimelineEntry(event, toolNamesByCallId) {
     const toolName = data.toolName || toolNamesByCallId.get(data.toolCallId) || "unknown";
     const status = data.success === false ? "failed" : "succeeded";
     let detail = `Result: ${status}`;
+    if (data.model) {
+      detail += `\nModel: ${data.model}`;
+    }
     if (data.error?.message) {
       detail += `\nError: ${data.error.message}`;
-    } else if (data.result?.content) {
-      detail += `\nOutput: ${data.result.content}`;
-    } else if (data.result?.detailedContent) {
-      detail += `\nOutput: ${data.result.detailedContent}`;
+    }
+    if (toolName === "report_intent") {
+      if (data.result?.detailedContent) {
+        detail += `\nDetails:\n${data.result.detailedContent}`;
+      }
+    } else {
+      if (data.result?.content) {
+        detail += `\nOutput:\n${data.result.content}`;
+      }
+      if (data.result?.detailedContent) {
+        detail += `\nDetails:\n${data.result.detailedContent}`;
+      }
     }
     return {
       type,
@@ -194,9 +202,18 @@ function renderTimeline(events) {
     return `<p class="placeholder">No events found for this session.</p>`;
   }
   const toolNamesByCallId = new Map();
+  for (const event of events) {
+    if (event?.type === "tool.execution_start" && event?.data?.toolCallId) {
+      toolNamesByCallId.set(event.data.toolCallId, event.data.toolName || "unknown");
+    }
+  }
   const timeline = events
     .map((event) => toTimelineEntry(event, toolNamesByCallId))
-    .map((entry) => `
+    .map((entry) => {
+      if (entry.type === "assistant.turn_start" || entry.type === "assistant.turn_end" || entry.type === "tool.execution_start" || entry.type === "session.start") {
+        return `<div class="timeline-divider"><span>${escapeHtml(entry.time)}${entry.time ? " · " : ""}${escapeHtml(entry.type)}</span></div>`;
+      }
+      return `
       <article class="timeline-item">
         <div class="timeline-head">
           <div class="timeline-title">${escapeHtml(entry.title)}</div>
@@ -204,7 +221,8 @@ function renderTimeline(events) {
         </div>
         <div class="timeline-detail">${escapeHtml(entry.detail || "")}</div>
       </article>
-    `)
+    `;
+    })
     .join("");
   return `<section class="timeline">${timeline}</section>`;
 }
