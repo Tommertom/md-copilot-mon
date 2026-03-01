@@ -239,12 +239,10 @@ pasteMdBtn.addEventListener("click", async () => {
   if (!selectedId) return;
   try {
     const markdown = await navigator.clipboard.readText();
+    const escapeContainer = document.createElement("div");
+    escapeContainer.textContent = markdown;
     setEditorHtml(
-      markdown
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll("\n", "<br>")
+      escapeContainer.innerHTML.replaceAll("\n", "<br>")
     );
     updateSaveButtonState();
   } catch (error) {
