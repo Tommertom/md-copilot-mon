@@ -210,3 +210,45 @@ function connectSessionChangeEvents() {
 }
 
 connectSessionChangeEvents();
+
+
+(function () {
+  const SIDEBAR_DEFAULT_WIDTH = 320;
+  const resizer = document.getElementById("sidebar-resizer");
+  const app = document.querySelector(".app");
+  if (!resizer || !app) return;
+  let startX = 0;
+  let startWidth = 0;
+  let rafPending = false;
+  let pendingWidth = 0;
+  resizer.addEventListener("mousedown", (e) => {
+    startX = e.clientX;
+    startWidth = parseInt(
+      getComputedStyle(app).getPropertyValue("--sidebar-width") ||
+        String(SIDEBAR_DEFAULT_WIDTH),
+      10,
+    );
+    resizer.classList.add("dragging");
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+    e.preventDefault();
+  });
+  function onMouseMove(e) {
+    pendingWidth = Math.max(
+      100,
+      Math.min(startWidth + (e.clientX - startX), window.innerWidth - 200),
+    );
+    if (!rafPending) {
+      rafPending = true;
+      requestAnimationFrame(() => {
+        app.style.setProperty("--sidebar-width", pendingWidth + "px");
+        rafPending = false;
+      });
+    }
+  }
+  function onMouseUp() {
+    resizer.classList.remove("dragging");
+    document.removeEventListener("mousemove", onMouseMove);
+    document.removeEventListener("mouseup", onMouseUp);
+  }
+})();
