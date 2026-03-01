@@ -5,51 +5,6 @@ Agent operations viewer for Copilot sessions: monitor agent progress, internal s
 
 Each component is its own window, so you can organise your workspace as you like - for example, you could keep the markdown viewer and events log on a secondary monitor while you focus on the agent todos and diffs on your main screen.
 
-Install from npm
-
-```bash
-npm i -g md-copilot-viewer
-md-copilot-viewer
-```
-
-Or run without installing globally:
-
-```bash
-npx md-copilot-viewer
-```
-
-On first start, the app creates `.env-md-copilot-viewer` from `.env.template` if it does not exist.
-
-
-## Features
-
-*   Realtime monitoring of Copilot session markdown and state files, so agent updates appear as they happen.
-*   Built-in rendered markdown editor with save support for quickly updating notes while you monitor live agent activity.
-*   `Ctrl+S` (`Cmd+S` on macOS) triggers the same save action as the **Save** button for the active file.
-*   Fast context switching with a recent file list showing detected title and path for each session artifact.
-*   Automatically surfaces plans generated in Copilot plan mode so agent intent is visible at a glance.
-*   Dedicated mini-app views for Git Diff, Todos, Events, Session Files, Session Research, and Session Checkpoints to inspect agent actions and outputs.
-*   Pop Out support for multi-window layouts, making it easy to organize an Agent HQ / vibe engineering workspace.
-*   Events viewer caches loaded sessions/events in-browser and only refetches when **Refresh** is clicked.
-*   Copy/paste rendered content as markdown and optionally export to DOCX for sharing outside the app.
-
-## How it works
-
-1.  A Node watcher tracks markdown file changes (create/update) in realtime.
-2.  The backend serves a capped, recent file list plus rendered markdown content.
-3.  The backend pushes file-change events via SSE so the web UI refreshes list/preview automatically and supports DOCX export.
-4.  The main web UI provides a markdown editor with save button that sends updates back to the backend, which writes to disk and triggers file-change events for live refresh.
-5.  There are also dedicated mini-app views for Git Diff, Todos, Events, Session Files, Session Research, and Session Checkpoints that fetch data from the backend on demand. The Events viewer caches loaded sessions/events in-browser and only refetches when **Refresh** is clicked.
-
-## Available apps (each in its own window)
-*   **Markdown Viewer/Editor** - rendered markdown editor with save support for session notes and agent updates.
-*   **Git Diff** - rendered git diffs for tracked files in the session.
-*   **Todos** - tables of incomplete todos extracted from markdown files for each session.
-*   **Events** - parsed events lines for each session with filtering and search support.
-*   **Session Files** - file browser for session files generated internally by Copilot with metadata and download support.
-*   **Session Research** - file browser for research files generated internally by Copilot with metadata and download support.
-*   **Session Checkpoints** - list and content viewer for internal checkpoint files. Markdown files are shown in the main markdown viewer.
-
 ## Screenshot - Agent HQ example
 ![Screenshot 1 - Agent HQ](./screenshots/md-copilot-viewer.png)
 
@@ -66,19 +21,29 @@ Setup for web app development:
 
 Other menu items not shown: session files, session research, checkpoints, and popout (undocks the markdown viewer into a separate window).
 
-## Screenshot - Agent HQ - MD viewer only
-![Screenshot 2 - MD viewer only](./screenshots/Screenshot-1.png)
+## Available apps (each in its own window)
+*   **Markdown Viewer/Editor** - rendered markdown editor with save support for session notes and agent updates.
+*   **Git Diff** - rendered git diffs for tracked files in the session.
+*   **Todos** - tables of incomplete todos extracted from markdown files for each session.
+*   **Events** - parsed events lines for each session with filtering and search support.
+*   **Session Files** - file browser for session files generated internally by Copilot with metadata and download support.
+*   **Session Research** - file browser for research files generated internally by Copilot with metadata and download support.
+*   **Session Checkpoints** - list and content viewer for internal checkpoint files. Markdown files are shown in the main markdown viewer.
 
-## Exposed apps and subapps
-The main app is the markdown file viewer/editor at `http://localhost:<port>/`.
+## Install from npm
 
-Extra subapps:
-*   `http://localhost:<port>/diff/` for git diff rendering
-*   `http://localhost:<port>/todos/` for session todo tables
-*   `http://localhost:<port>/events/` for session `events.jsonl` inspection
-*   `http://localhost:<port>/session-files/` for per-session files in `~/.copilot/session-data/files`
-*   `http://localhost:<port>/session-research/` for per-session files in `~/.copilot/session-data/research`
-*   `http://localhost:<port>/session-checkpoints/` for per-session checkpoint `.json` inspection in `~/.copilot/session-data/checkpoints`
+```bash
+npm i -g md-copilot-viewer
+md-copilot-viewer
+```
+
+Or run without installing globally:
+
+```bash
+npx md-copilot-viewer
+```
+
+On first start, the app creates `.env-md-copilot-viewer` from `.env.template` if it does not exist.
 
 ## `.env-md-copilot-viewer` config
 
@@ -106,6 +71,43 @@ FILE_MAX_LIMIT=20
 *   `FILE_MAX_LIMIT`  
     Maximum number of most recently updated markdown files returned to the frontend (default `20`).
     Keep this value modest to avoid unnecessary system load.
+
+
+## Screenshot - Agent HQ - MD viewer only
+![Screenshot 2 - MD viewer only](./screenshots/Screenshot-1.png)
+
+## Features
+
+*   Realtime monitoring of Copilot session markdown and state files, so agent updates appear as they happen.
+*   Built-in rendered markdown editor with save support for quickly updating notes while you monitor live agent activity.
+*   `Ctrl+S` (`Cmd+S` on macOS) triggers the same save action as the **Save** button for the active file.
+*   Fast context switching with a recent file list showing detected title and path for each session artifact.
+*   Automatically surfaces plans generated in Copilot plan mode so agent intent is visible at a glance.
+*   Dedicated mini-app views for Git Diff, Todos, Events, Session Files, Session Research, and Session Checkpoints to inspect agent actions and outputs.
+*   Pop Out support for multi-window layouts, making it easy to organize an Agent HQ / vibe engineering workspace.
+*   Events viewer caches loaded sessions/events in-browser and only refetches when **Refresh** is clicked.
+*   Copy/paste rendered content as markdown and optionally export to DOCX for sharing outside the app.
+
+
+## How it works
+
+1.  A Node watcher tracks markdown file changes (create/update) in realtime.
+2.  The backend serves a capped, recent file list plus rendered markdown content.
+3.  The backend pushes file-change events via SSE so the web UI refreshes list/preview automatically and supports DOCX export.
+4.  The main web UI provides a markdown editor with save button that sends updates back to the backend, which writes to disk and triggers file-change events for live refresh.
+5.  There are also dedicated mini-app views for Git Diff, Todos, Events, Session Files, Session Research, and Session Checkpoints that fetch data from the backend on demand. The Events viewer caches loaded sessions/events in-browser and only refetches when **Refresh** is clicked.
+
+## Exposed apps and subapps routes
+The main app is the markdown file viewer/editor at `http://localhost:<port>/`.
+
+Extra subapps:
+*   `http://localhost:<port>/diff/` for git diff rendering
+*   `http://localhost:<port>/todos/` for session todo tables
+*   `http://localhost:<port>/events/` for session `events.jsonl` inspection
+*   `http://localhost:<port>/session-files/` for per-session files in `~/.copilot/session-data/files`
+*   `http://localhost:<port>/session-research/` for per-session files in `~/.copilot/session-data/research`
+*   `http://localhost:<port>/session-checkpoints/` for per-session checkpoint `.json` inspection in `~/.copilot/session-data/checkpoints`
+
 
 ## API endpoints
 
