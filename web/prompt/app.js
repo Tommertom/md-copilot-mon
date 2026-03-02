@@ -66,10 +66,26 @@ async function runPrompt() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt }),
     });
-    const data = await res.json();
     if (!res.ok) {
-      throw new Error(typeof data?.error === "string" ? data.error : "Failed to run prompt");
+      let message = "Failed to run prompt";
+      try {
+        const errorData = await res.json();
+        if (errorData && typeof errorData.error === "string") {
+          message = errorData.error;
+        }
+      } catch {
+        try {
+          const text = await res.text();
+          if (text) {
+            message = text;
+          }
+        } catch {
+          // Ignore secondary body read errors
+        }
+      }
+      throw new Error(message);
     }
+    const data = await res.json();
     statusTextEl.textContent = "Prompt completed successfully.";
     promptOutputEl.textContent = typeof data.output === "string" && data.output ? data.output : "(no output)";
   } catch (error) {

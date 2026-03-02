@@ -236,7 +236,7 @@ const gitCommitRateLimiter = rateLimit({
 });
 const promptRateLimiter = rateLimit({
   windowMs: 10_000,
-  limit: 10,
+  limit: 3,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many prompt requests, please retry shortly" }
@@ -512,9 +512,25 @@ app.post("/api/sessions/:id/prompt", promptRateLimiter, async (req, res) => {
       res.status(400).json({ error: "Session workspace cwd not found" });
       return;
     }
+    let cwdStats;
+    try {
+      cwdStats = await fs.stat(sessionCwd);
+    } catch (fsError) {
+      const typedFsError = fsError as NodeJS.ErrnoException;
+      if (typedFsError.code === "ENOENT") {
+        res.status(400).json({ error: "Session workspace directory not found" });
+        return;
+      }
+      throw fsError;
+    }
+    if (!cwdStats.isDirectory()) {
+      res.status(400).json({ error: "Session workspace directory not found" });
+      return;
+    }
     const { stdout } = await execFileAsync("copilot", ["-p", prompt], {
       cwd: sessionCwd,
       maxBuffer: 5 * 1024 * 1024,
+      timeout: 5 * 60 * 1000,
       encoding: "utf8"
     });
     res.json({ output: stdout, directory: toDisplayPath(sessionCwd) });
