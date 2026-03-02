@@ -294,7 +294,19 @@ app.get("/api/git-diff", gitDiffRateLimiter, async (req, res) => {
   try {
     const sessionId = typeof req.query.sessionId === "string" ? req.query.sessionId : undefined;
     const diffCwd = await resolveGitCwd(sessionId);
-    const { stdout } = await execFileAsync("git", ["diff", "--no-color"], { cwd: diffCwd, maxBuffer: 5 * 1024 * 1024, encoding: "utf8" });
+    const childEnv = { ...process.env };
+    delete childEnv.NODE_CHANNEL_FD;
+    delete childEnv.NODE_UNIQUE_ID;
+    let stdout: string;
+    try {
+      ({ stdout } = await execFileAsync("git", ["diff", "--no-color"], { cwd: diffCwd, env: childEnv, maxBuffer: 5 * 1024 * 1024, encoding: "utf8" }));
+    } catch (error) {
+      const execError = error as NodeJS.ErrnoException;
+      if (execError.code !== "EBADF") {
+        throw error;
+      }
+      ({ stdout } = await execFileAsync("git", ["-C", diffCwd, "diff", "--no-color"], { env: childEnv, maxBuffer: 5 * 1024 * 1024, encoding: "utf8" }));
+    }
     res.json({ diff: stdout, diffDirectory: toDisplayPath(diffCwd) });
   } catch (error) {
     const typedError = error as Error & { httpStatus?: number };
