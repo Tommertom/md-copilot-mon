@@ -20,6 +20,8 @@ let sortDirection = "desc";
 let searchQuery = "";
 let loadedEvents = [];
 const sessionEventsCache = new Map();
+let autoRefresh = false;
+let autoRefreshInterval = null;
 
 function previewJson(value, max = 240) {
   try {
@@ -451,7 +453,21 @@ timelineContainerEl.addEventListener("click", (event) => {
 });
 
 refreshEventsBtn.addEventListener("click", () => {
-  void refreshSessions({ force: true });
+  autoRefresh = !autoRefresh;
+  if (autoRefresh) {
+    refreshEventsBtn.textContent = "Auto-Refresh: On";
+    refreshEventsBtn.classList.add("active");
+    void refreshSessions({ force: true });
+    clearInterval(autoRefreshInterval);
+    autoRefreshInterval = setInterval(() => {
+      void refreshSessions({ force: true });
+    }, 2000);
+  } else {
+    refreshEventsBtn.textContent = "Auto-Refresh: Off";
+    refreshEventsBtn.classList.remove("active");
+    clearInterval(autoRefreshInterval);
+    autoRefreshInterval = null;
+  }
 });
 
 toggleSortBtn.addEventListener("click", () => {

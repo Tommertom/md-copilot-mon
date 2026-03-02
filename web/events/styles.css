@@ -28,6 +28,11 @@
 }
 #refresh-events:hover,
 #toggle-sort:hover { background: #f1f3f4; }
+#refresh-events.active {
+  background: #eef4ff;
+  border-color: #9bb8ff;
+  color: #1d4fbf;
+}
 
 #search-bar-container { margin-bottom: 12px; }
 #event-search {
