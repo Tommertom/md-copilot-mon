@@ -70,7 +70,7 @@ async function runPrompt() {
     if (!res.ok) {
       throw new Error(typeof data?.error === "string" ? data.error : "Failed to run prompt");
     }
-    statusTextEl.textContent = `Prompt completed in ${data.directory || "session directory"}.`;
+    statusTextEl.textContent = "Prompt completed successfully.";
     promptOutputEl.textContent = typeof data.output === "string" && data.output ? data.output : "(no output)";
   } catch (error) {
     statusTextEl.textContent = `Prompt failed: ${error instanceof Error ? error.message : String(error)}`;

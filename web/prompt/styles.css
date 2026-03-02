@@ -10,7 +10,7 @@
   cursor: pointer;
 }
 #refresh-sessions:hover,
-#run-prompt:hover { background: #f1f3f4; }
+#run-prompt:not(:disabled):hover { background: #f1f3f4; }
 #run-prompt:disabled {
   opacity: 0.6;
   cursor: default;

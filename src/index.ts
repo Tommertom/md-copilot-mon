@@ -496,6 +496,14 @@ app.post("/api/sessions/:id/prompt", promptRateLimiter, async (req, res) => {
     res.status(400).json({ error: "Prompt is required" });
     return;
   }
+  if (prompt.length > 10_000) {
+    res.status(400).json({ error: "Prompt is too long (max 10000 characters)" });
+    return;
+  }
+  if (prompt.includes("\u0000")) {
+    res.status(400).json({ error: "Prompt contains unsupported control characters" });
+    return;
+  }
   try {
     const session = await resolveSession(req.params.id, res);
     if (!session) return;
@@ -517,8 +525,15 @@ app.post("/api/sessions/:id/prompt", promptRateLimiter, async (req, res) => {
       return;
     }
     if (typeof typedError.code === "number") {
-      const output = [typedError.stderr, typedError.stdout]
-        .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+      const output = [
+        typeof typedError.stderr === "string" && typedError.stderr.trim().length > 0
+          ? `stderr:\n${typedError.stderr}`
+          : "",
+        typeof typedError.stdout === "string" && typedError.stdout.trim().length > 0
+          ? `stdout:\n${typedError.stdout}`
+          : ""
+      ]
+        .filter((value): value is string => value.length > 0)
         .join("\n");
       res.status(400).json({ error: output || typedError.message });
       return;
