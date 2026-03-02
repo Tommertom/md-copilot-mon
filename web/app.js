@@ -24,6 +24,7 @@ const menuOpenSessionResearchBtn = document.getElementById(
   "menu-open-session-research",
 );
 const saveBtn = document.getElementById("save-file");
+const executePlanBtn = document.getElementById("execute-plan");
 
 const turndownService = new window.TurndownService({
   headingStyle: "atx",
@@ -74,6 +75,10 @@ function setEditorHtml(html) {
 
 function getSelectedFile() {
   return files.find((file) => file.id === selectedId) ?? null;
+}
+
+function isPlanFile(displayPath) {
+  return /[/\\]\.copilot[/\\]session-state[/\\][^/\\]+[/\\]plan\.md$/i.test(displayPath);
 }
 
 function setCurrentFileLabel(displayPath) {
@@ -231,6 +236,7 @@ async function refreshFiles() {
     pasteMdBtn.disabled = true;
     downloadDocxBtn.disabled = true;
     saveBtn.disabled = true;
+    executePlanBtn.hidden = true;
   }
 }
 
@@ -254,6 +260,7 @@ async function loadPreview(id) {
   copyMdBtn.disabled = false;
   pasteMdBtn.disabled = false;
   downloadDocxBtn.disabled = false;
+  executePlanBtn.hidden = !isPlanFile(data.path);
   updateSaveButtonState();
 }
 
@@ -316,6 +323,27 @@ pasteMdBtn.addEventListener("click", async () => {
 downloadDocxBtn.addEventListener("click", () => {
   if (!selectedId) return;
   window.location.href = `/api/files/${encodeURIComponent(selectedId)}/docx`;
+});
+
+executePlanBtn.addEventListener("click", async () => {
+  if (!selectedId) return;
+  executePlanBtn.disabled = true;
+  try {
+    const res = await fetch(`/api/files/${encodeURIComponent(selectedId)}/execute-plan`, {
+      method: "POST",
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(`Failed to execute plan: ${data.error || `HTTP ${res.status}`}`);
+      return;
+    }
+    alert(`Plan execution started (session: ${data.sessionId})`);
+  } catch (error) {
+    console.error("Failed to execute plan", error);
+    alert("Failed to execute plan.");
+  } finally {
+    executePlanBtn.disabled = false;
+  }
 });
 
 function setAppMenuOpen(isOpen) {
