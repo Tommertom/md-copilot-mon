@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Copilot Prompt Runner</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="stylesheet" href="/prompt/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <h2>Prompt</h2>
+        <ul id="session-list"></ul>
+      </aside>
+      <div
+        class="resizer"
+        id="sidebar-resizer"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize sidebar"
+        tabindex="0"
+      ></div>
+      <main class="content">
+        <div class="toolbar">
+          <span id="current-session">Select a session to run a prompt</span>
+          <div id="toolbar-actions">
+            <button id="refresh-sessions" type="button">Refresh</button>
+            <button id="run-prompt" type="button" disabled>Run Prompt</button>
+            <div class="app-menu">
+              <button id="app-menu-button" type="button" class="icon-button" aria-label="Open app menu" aria-haspopup="true" aria-expanded="false" aria-controls="app-menu">
+                <span class="app-grid-icon" aria-hidden="true">
+                  <span></span><span></span><span></span>
+                  <span></span><span></span><span></span>
+                </span>
+              </button>
+              <div id="app-menu" class="menu-popup" hidden></div>
+            </div>
+          </div>
+        </div>
+        <div id="data-view">
+          <label for="prompt-input">Prompt</label>
+          <textarea id="prompt-input" rows="8" placeholder="Enter prompt text for Copilot CLI"></textarea>
+          <p id="status-text" class="placeholder">Select a session and enter a prompt to run.</p>
+          <pre id="prompt-output" class="output-box"></pre>
+        </div>
+      </main>
+    </div>
+    <script type="module" src="/prompt/app.js"></script>
+  </body>
+</html>

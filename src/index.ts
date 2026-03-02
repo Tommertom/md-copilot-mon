@@ -490,6 +490,74 @@ app.get("/api/sessions/:id/events", async (req, res) => {
   }
 });
 
+app.post("/api/sessions/:id/prompt", promptRateLimiter, async (req, res) => {
+  const prompt = typeof req.body?.prompt === "string" ? req.body.prompt.trim() : "";
+  if (!prompt) {
+    res.status(400).json({ error: "Prompt is required" });
+    return;
+  }
+  if (prompt.length > 10_000) {
+    res.status(400).json({ error: "Prompt is too long (max 10000 characters)" });
+    return;
+  }
+  if (prompt.includes("\u0000")) {
+    res.status(400).json({ error: "Prompt contains unsupported control characters" });
+    return;
+  }
+  try {
+    const session = await resolveSession(req.params.id, res);
+    if (!session) return;
+    const sessionCwd = session.workspace?.cwd?.trim();
+    if (!sessionCwd) {
+      res.status(400).json({ error: "Session workspace cwd not found" });
+      return;
+    }
+    let cwdStats;
+    try {
+      cwdStats = await fs.stat(sessionCwd);
+    } catch (fsError) {
+      const typedFsError = fsError as NodeJS.ErrnoException;
+      if (typedFsError.code === "ENOENT") {
+        res.status(400).json({ error: "Session workspace directory not found" });
+        return;
+      }
+      throw fsError;
+    }
+    if (!cwdStats.isDirectory()) {
+      res.status(400).json({ error: "Session workspace directory not found" });
+      return;
+    }
+    const { stdout } = await execFileAsync("copilot", ["-p", prompt], {
+      cwd: sessionCwd,
+      maxBuffer: 5 * 1024 * 1024,
+      timeout: 5 * 60 * 1000,
+      encoding: "utf8"
+    });
+    res.json({ output: stdout, directory: toDisplayPath(sessionCwd) });
+  } catch (error) {
+    const typedError = error as NodeJS.ErrnoException & { stdout?: string; stderr?: string };
+    if (typedError.code === "ENOENT") {
+      res.status(500).json({ error: "Copilot CLI not found on server PATH" });
+      return;
+    }
+    if (typeof typedError.code === "number") {
+      const output = [
+        typeof typedError.stderr === "string" && typedError.stderr.trim().length > 0
+          ? `stderr:\n${typedError.stderr}`
+          : "",
+        typeof typedError.stdout === "string" && typedError.stdout.trim().length > 0
+          ? `stdout:\n${typedError.stdout}`
+          : ""
+      ]
+        .filter((value): value is string => value.length > 0)
+        .join("\n");
+      res.status(400).json({ error: output || typedError.message });
+      return;
+    }
+    res.status(500).json({ error: typedError.message });
+  }
+});
+
 app.get("/api/sessions/:id/files", async (req, res) => {
   try {
     const session = await resolveSession(req.params.id, res);
