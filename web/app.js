@@ -1,4 +1,5 @@
 import { initResizer } from "/resizer.js";
+import { getFrontendConfig } from "/shared.js";
 
 const fileListEl = document.getElementById("file-list");
 const searchInputEl = document.getElementById("file-search");
@@ -50,6 +51,7 @@ let selectedId = null;
 let loadedId = null;
 let searchQuery = "";
 let initialized = false;
+let experimentalEnabled = false;
 let loadedMarkdown = "";
 let isSaving = false;
 let mermaidCounter = 0;
@@ -260,7 +262,7 @@ async function loadPreview(id) {
   copyMdBtn.disabled = false;
   pasteMdBtn.disabled = false;
   downloadDocxBtn.disabled = false;
-  executePlanBtn.hidden = !isPlanFile(data.path);
+  executePlanBtn.hidden = !experimentalEnabled || !isPlanFile(data.path);
   updateSaveButtonState();
 }
 
@@ -529,6 +531,13 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
+try {
+  const frontendConfig = await getFrontendConfig();
+  experimentalEnabled = frontendConfig.experimental === true;
+} catch (error) {
+  console.error("Failed to initialize frontend config", error);
+  experimentalEnabled = false;
+}
 refreshFiles();
 
 let reconnectTimer = null;
