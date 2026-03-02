@@ -15,7 +15,7 @@ This is an example - you can organise the windows of the various apps as you lik
 Setup for web app development:
 
 - **Green** - md viewer and web app preview
-- **Yellow** - menu for mini-apps (diff, todos, events, files, checkpoints research, popout)
+- **Yellow** - menu for mini-apps (diff, todos, events, prompt, files, checkpoints research, popout)
 - **Orange** - three agents
 - **Blue** - Git diffs per session
 - **Purple** - agent todos
@@ -29,6 +29,7 @@ Other menu items not shown: session files, session research, checkpoints, and po
 - **Git Diff** - rendered git diffs for tracked files in the session.
 - **Todos** - tables of incomplete todos extracted from markdown files for each session.
 - **Events** - parsed events lines for each session with filtering and search support.
+- **Prompt** - run a Copilot CLI prompt (`copilot -p`) in the selected session workspace.
 - **Session Files** - file browser for session files generated internally by Copilot with metadata and download support.
 - **Session Research** - file browser for research files generated internally by Copilot with metadata and download support.
 - **Session Checkpoints** - list and content viewer for internal checkpoint files. Markdown files are shown in the main markdown viewer.
@@ -84,7 +85,7 @@ FILE_MAX_LIMIT=20
 - `Ctrl+S` (`Cmd+S` on macOS) triggers the same save action as the **Save** button for the active file.
 - Fast context switching with a recent file list showing detected title and path for each session artifact.
 - Automatically surfaces plans generated in Copilot plan mode so agent intent is visible at a glance.
-- Dedicated mini-app views for Git Diff, Todos, Events, Session Files, Session Research, and Session Checkpoints to inspect agent actions and outputs.
+- Dedicated mini-app views for Git Diff, Todos, Events, Prompt, Session Files, Session Research, and Session Checkpoints to inspect agent actions and outputs.
 - Pop Out support for multi-window layouts, making it easy to organize an Agent HQ / vibe engineering workspace.
 - Events viewer caches loaded sessions/events in-browser and only refetches when **Refresh** is clicked.
 - Copy/paste rendered content as markdown and optionally export to DOCX for sharing outside the app.
@@ -95,7 +96,7 @@ FILE_MAX_LIMIT=20
 2.  The backend serves a capped, recent file list plus rendered markdown content.
 3.  The backend pushes file-change events via SSE so the web UI refreshes list/preview automatically and supports DOCX export.
 4.  The main web UI provides a markdown editor with save button that sends updates back to the backend, which writes to disk and triggers file-change events for live refresh.
-5.  There are also dedicated mini-app views for Git Diff, Todos, Events, Session Files, Session Research, and Session Checkpoints that fetch data from the backend on demand. The Events viewer caches loaded sessions/events in-browser and only refetches when **Refresh** is clicked.
+5.  There are also dedicated mini-app views for Git Diff, Todos, Events, Prompt, Session Files, Session Research, and Session Checkpoints that fetch data from the backend on demand. The Events viewer caches loaded sessions/events in-browser and only refetches when **Refresh** is clicked.
 
 ## Exposed apps and subapps routes
 
@@ -106,6 +107,7 @@ Extra subapps:
 - `http://localhost:<port>/diff/` for git diff rendering
 - `http://localhost:<port>/todos/` for session todo tables
 - `http://localhost:<port>/events/` for session `events.jsonl` inspection
+- `http://localhost:<port>/prompt/` for running `copilot -p` in a selected session workspace
 - `http://localhost:<port>/session-files/` for per-session files in `~/.copilot/session-data/files`
 - `http://localhost:<port>/session-research/` for per-session files in `~/.copilot/session-data/research`
 - `http://localhost:<port>/session-checkpoints/` for per-session checkpoint `.json` inspection in `~/.copilot/session-data/checkpoints`
@@ -132,6 +134,9 @@ Extra subapps:
   Returns rows for one specific session table.
 - `GET /api/sessions/:id/events`  
   Returns parsed `events.jsonl` lines for a session as a JSON array.
+- `POST /api/sessions/:id/prompt`  
+  Runs `copilot -p "<prompt>"` in the selected session workspace `cwd`.  
+  Body: `{ prompt: string }`, response: `{ output, directory }`.
 - `GET /api/sessions/:id/files`  
   Returns `{ directory, files }` where `files` includes session file metadata (`path`, `size`, `mtimeMs`) from `~/.copilot/session-data/files`.
 - `GET /api/sessions/:id/files/download?path=<relative-path>`  

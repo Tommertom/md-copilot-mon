@@ -234,6 +234,13 @@ const gitCommitRateLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: "Too many git commit requests, please retry shortly" }
 });
+const promptRateLimiter = rateLimit({
+  windowMs: 10_000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many prompt requests, please retry shortly" }
+});
 
 function createHttpError(httpStatus: number, message: string): Error & { httpStatus: number } {
   const error = new Error(message) as Error & { httpStatus: number };
@@ -480,6 +487,43 @@ app.get("/api/sessions/:id/events", async (req, res) => {
     res.json(events);
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+app.post("/api/sessions/:id/prompt", promptRateLimiter, async (req, res) => {
+  const prompt = typeof req.body?.prompt === "string" ? req.body.prompt.trim() : "";
+  if (!prompt) {
+    res.status(400).json({ error: "Prompt is required" });
+    return;
+  }
+  try {
+    const session = await resolveSession(req.params.id, res);
+    if (!session) return;
+    const sessionCwd = session.workspace?.cwd?.trim();
+    if (!sessionCwd) {
+      res.status(400).json({ error: "Session workspace cwd not found" });
+      return;
+    }
+    const { stdout } = await execFileAsync("copilot", ["-p", prompt], {
+      cwd: sessionCwd,
+      maxBuffer: 5 * 1024 * 1024,
+      encoding: "utf8"
+    });
+    res.json({ output: stdout, directory: toDisplayPath(sessionCwd) });
+  } catch (error) {
+    const typedError = error as NodeJS.ErrnoException & { stdout?: string; stderr?: string };
+    if (typedError.code === "ENOENT") {
+      res.status(500).json({ error: "Copilot CLI not found on server PATH" });
+      return;
+    }
+    if (typeof typedError.code === "number") {
+      const output = [typedError.stderr, typedError.stdout]
+        .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+        .join("\n");
+      res.status(400).json({ error: output || typedError.message });
+      return;
+    }
+    res.status(500).json({ error: typedError.message });
   }
 });
 
