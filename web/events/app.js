@@ -211,6 +211,17 @@ function toTimelineEntry(event, toolNamesByCallId) {
     };
   }
 
+  if (type === "session.mode_changed") {
+    const previousMode = data.previousMode || "?";
+    const newMode = data.newMode || "?";
+    return {
+      type,
+      time,
+      title: "Mode changed",
+      detail: `${previousMode} → ${newMode}`,
+    };
+  }
+
   if (type === "session.task_complete") {
     return {
       type,
