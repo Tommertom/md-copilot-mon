@@ -213,6 +213,17 @@ function toTimelineEntry(event, toolNamesByCallId) {
     };
   }
 
+  if (type === "session.info") {
+    const infoType = data.infoType || "info";
+    const message = data.message || previewJson(data, 300);
+    return {
+      type,
+      time,
+      title: `Session info: ${infoType}`,
+      detail: message,
+    };
+  }
+
   if (type === "session.mode_changed") {
     const previousMode = data.previousMode || "?";
     const newMode = data.newMode || "?";
