@@ -57,6 +57,7 @@ AUTO_INCREMENT_PORT=true
 LOAD_EXISTING_MD=true
 EXCLUDE_PATTERN='"checkpoints/index.md"'
 FILE_MAX_LIMIT=20
+EXPERIMENTAL=false
 ```
 
 - `PORT`  
@@ -73,6 +74,9 @@ FILE_MAX_LIMIT=20
 - `FILE_MAX_LIMIT`  
   Maximum number of most recently updated markdown files returned to the frontend (default `20`).
   Keep this value modest to avoid unnecessary system load.
+- `EXPERIMENTAL`  
+  - `false` (default): hide experimental frontend features.
+  - `true`: enable experimental frontend features (Prompt app menu entry and **Execute plan** button in the MD viewer).
 
 ## Screenshot - Agent HQ - MD viewer only
 
@@ -85,7 +89,8 @@ FILE_MAX_LIMIT=20
 - `Ctrl+S` (`Cmd+S` on macOS) triggers the same save action as the **Save** button for the active file.
 - Fast context switching with a recent file list showing detected title and path for each session artifact.
 - Automatically surfaces plans generated in Copilot plan mode so agent intent is visible at a glance.
-- Dedicated mini-app views for Git Diff, Todos, Events, Prompt, Session Files, Session Research, and Session Checkpoints to inspect agent actions and outputs.
+- Dedicated mini-app views for Git Diff, Todos, Events, Session Files, Session Research, and Session Checkpoints to inspect agent actions and outputs.
+- Optional experimental Prompt mini-app and **Execute plan** button in the MD viewer (controlled by `EXPERIMENTAL=true`).
 - Pop Out support for multi-window layouts, making it easy to organize an Agent HQ / vibe engineering workspace.
 - Events viewer caches loaded sessions/events in-browser and only refetches when **Refresh** is clicked.
 - Copy/paste rendered content as markdown and optionally export to DOCX for sharing outside the app.

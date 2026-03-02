@@ -29,6 +29,9 @@ EXCLUDE_PATTERN='"checkpoints/index.md"'
 
 # Maximum number of most recently updated files sent to the frontend
 FILE_MAX_LIMIT=20
+
+# true: enables experimental frontend features, false: hides them
+EXPERIMENTAL=false
 `;
 
 function ensureEnvFile(): string {
@@ -182,6 +185,7 @@ const autoIncrementPort = process.env.AUTO_INCREMENT_PORT !== "false";
 const loadExistingMd = process.env.LOAD_EXISTING_MD !== "false";
 const excludePatterns = parseExcludePatterns(process.env.EXCLUDE_PATTERN);
 const fileMaxLimit = parseFileMaxLimit(process.env.FILE_MAX_LIMIT);
+const experimental = process.env.EXPERIMENTAL === "true";
 const cwd = process.cwd();
 const roots = defaultRoots(cwd);
 const index = new MarkdownIndex(roots, loadExistingMd, excludePatterns);
@@ -234,6 +238,13 @@ const gitCommitRateLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: "Too many git commit requests, please retry shortly" }
 });
+const promptRateLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many prompt requests, please retry shortly" }
+});
 const executePlanRateLimiter = rateLimit({
   windowMs: 60_000,
   limit: 5,
@@ -277,6 +288,10 @@ async function resolveSession(id: string, res: Response): Promise<SessionInfo | 
   return session;
 }
 app.use(express.static(webDir));
+
+app.get("/api/frontend-config", (_req, res) => {
+  res.json({ experimental });
+});
 
 app.get("/api/files", (_req, res) => {
   res.json(index.list().slice(0, fileMaxLimit).map((entry) => ({
@@ -854,6 +869,7 @@ async function start(): Promise<void> {
   console.log(`LOAD_EXISTING_MD=${String(loadExistingMd)}`);
   console.log(`EXCLUDE_PATTERN=${excludePatterns.join(",") || "(none)"}`);
   console.log(`FILE_MAX_LIMIT=${String(fileMaxLimit)}`);
+  console.log(`EXPERIMENTAL=${String(experimental)}`);
   console.log(`\nWatching roots:\n- ${roots.join("\n- ")}`);
   const startupUrl = `http://localhost:${runningPort}`;
   // final message should appear last so it's easy to spot and click
