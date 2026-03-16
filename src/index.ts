@@ -6,7 +6,7 @@ import fs from "node:fs/promises";
 import { createServer } from "node:http";
 import os from "node:os";
 import path from "node:path";
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { markdownToDocx, renderMarkdown } from "./markdown.js";
@@ -29,6 +29,9 @@ EXCLUDE_PATTERN='"checkpoints/index.md"'
 
 # Maximum number of most recently updated files sent to the frontend
 FILE_MAX_LIMIT=20
+
+# true: enables experimental frontend features, false: hides them
+EXPERIMENTAL=false
 `;
 
 function ensureEnvFile(): string {
@@ -182,6 +185,7 @@ const autoIncrementPort = process.env.AUTO_INCREMENT_PORT !== "false";
 const loadExistingMd = process.env.LOAD_EXISTING_MD !== "false";
 const excludePatterns = parseExcludePatterns(process.env.EXCLUDE_PATTERN);
 const fileMaxLimit = parseFileMaxLimit(process.env.FILE_MAX_LIMIT);
+const experimental = process.env.EXPERIMENTAL === "true";
 const cwd = process.cwd();
 const roots = defaultRoots(cwd);
 const index = new MarkdownIndex(roots, loadExistingMd, excludePatterns);
@@ -234,6 +238,20 @@ const gitCommitRateLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: "Too many git commit requests, please retry shortly" }
 });
+const promptRateLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many prompt requests, please retry shortly" }
+});
+const executePlanRateLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many execute-plan requests, please retry shortly" }
+});
 
 function createHttpError(httpStatus: number, message: string): Error & { httpStatus: number } {
   const error = new Error(message) as Error & { httpStatus: number };
@@ -271,6 +289,10 @@ async function resolveSession(id: string, res: Response): Promise<SessionInfo | 
 }
 app.use(express.static(webDir));
 
+app.get("/api/frontend-config", (_req, res) => {
+  res.json({ experimental });
+});
+
 app.get("/api/files", (_req, res) => {
   res.json(index.list().slice(0, fileMaxLimit).map((entry) => ({
     ...entry,
@@ -287,7 +309,19 @@ app.get("/api/git-diff", gitDiffRateLimiter, async (req, res) => {
   try {
     const sessionId = typeof req.query.sessionId === "string" ? req.query.sessionId : undefined;
     const diffCwd = await resolveGitCwd(sessionId);
-    const { stdout } = await execFileAsync("git", ["diff", "--no-color"], { cwd: diffCwd, maxBuffer: 5 * 1024 * 1024, encoding: "utf8" });
+    const childEnv = { ...process.env };
+    delete childEnv.NODE_CHANNEL_FD;
+    delete childEnv.NODE_UNIQUE_ID;
+    let stdout: string;
+    try {
+      ({ stdout } = await execFileAsync("git", ["diff", "--no-color"], { cwd: diffCwd, env: childEnv, maxBuffer: 5 * 1024 * 1024, encoding: "utf8" }));
+    } catch (error) {
+      const execError = error as NodeJS.ErrnoException;
+      if (execError.code !== "EBADF") {
+        throw error;
+      }
+      ({ stdout } = await execFileAsync("git", ["-C", diffCwd, "diff", "--no-color"], { env: childEnv, maxBuffer: 5 * 1024 * 1024, encoding: "utf8" }));
+    }
     res.json({ diff: stdout, diffDirectory: toDisplayPath(diffCwd) });
   } catch (error) {
     const typedError = error as Error & { httpStatus?: number };
@@ -480,6 +514,74 @@ app.get("/api/sessions/:id/events", async (req, res) => {
     res.json(events);
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+app.post("/api/sessions/:id/prompt", promptRateLimiter, async (req, res) => {
+  const prompt = typeof req.body?.prompt === "string" ? req.body.prompt.trim() : "";
+  if (!prompt) {
+    res.status(400).json({ error: "Prompt is required" });
+    return;
+  }
+  if (prompt.length > 10_000) {
+    res.status(400).json({ error: "Prompt is too long (max 10000 characters)" });
+    return;
+  }
+  if (prompt.includes("\u0000")) {
+    res.status(400).json({ error: "Prompt contains unsupported control characters" });
+    return;
+  }
+  try {
+    const session = await resolveSession(req.params.id, res);
+    if (!session) return;
+    const sessionCwd = session.workspace?.cwd?.trim();
+    if (!sessionCwd) {
+      res.status(400).json({ error: "Session workspace cwd not found" });
+      return;
+    }
+    let cwdStats;
+    try {
+      cwdStats = await fs.stat(sessionCwd);
+    } catch (fsError) {
+      const typedFsError = fsError as NodeJS.ErrnoException;
+      if (typedFsError.code === "ENOENT") {
+        res.status(400).json({ error: "Session workspace directory not found" });
+        return;
+      }
+      throw fsError;
+    }
+    if (!cwdStats.isDirectory()) {
+      res.status(400).json({ error: "Session workspace directory not found" });
+      return;
+    }
+    const { stdout } = await execFileAsync("copilot", ["-p", prompt], {
+      cwd: sessionCwd,
+      maxBuffer: 5 * 1024 * 1024,
+      timeout: 5 * 60 * 1000,
+      encoding: "utf8"
+    });
+    res.json({ output: stdout, directory: toDisplayPath(sessionCwd) });
+  } catch (error) {
+    const typedError = error as NodeJS.ErrnoException & { stdout?: string; stderr?: string };
+    if (typedError.code === "ENOENT") {
+      res.status(500).json({ error: "Copilot CLI not found on server PATH" });
+      return;
+    }
+    if (typeof typedError.code === "number") {
+      const output = [
+        typeof typedError.stderr === "string" && typedError.stderr.trim().length > 0
+          ? `stderr:\n${typedError.stderr}`
+          : "",
+        typeof typedError.stdout === "string" && typedError.stdout.trim().length > 0
+          ? `stdout:\n${typedError.stdout}`
+          : ""
+      ]
+        .filter((value): value is string => value.length > 0)
+        .join("\n");
+      res.status(400).json({ error: output || typedError.message });
+      return;
+    }
+    res.status(500).json({ error: typedError.message });
   }
 });
 
@@ -677,6 +779,37 @@ app.get("/api/session-changes", (_req, res) => {
   registerSseClient(res, sessionChangeClients);
 });
 
+const PLAN_MD_SESSION_RE = /[/\\]\.copilot[/\\]session-state[/\\]([^/\\]+)[/\\]plan\.md$/i;
+// UUID v4 pattern for validating session IDs extracted from the path
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+app.post("/api/files/:id/execute-plan", executePlanRateLimiter, (req, res) => {
+  const filePath = index.resolve(req.params.id);
+  if (!filePath) {
+    res.status(404).json({ error: "File not found" });
+    return;
+  }
+  const match = filePath.match(PLAN_MD_SESSION_RE);
+  if (!match) {
+    res.status(400).json({ error: "File is not plan.md inside a .copilot session-state directory" });
+    return;
+  }
+  const sessionId = match[1];
+  if (!UUID_RE.test(sessionId)) {
+    res.status(400).json({ error: "Invalid session ID format in file path" });
+    return;
+  }
+  const child = spawn("copilot", ["-p", sessionId, "Execute the plan plan.md", "--tools", "all", "--paths", "/"], {
+    detached: true,
+    stdio: "ignore"
+  });
+  child.on("error", (err) => {
+    console.error(`Failed to spawn copilot process for session ${sessionId}:`, err.message);
+  });
+  child.unref();
+  res.json({ message: "Plan execution started", sessionId });
+});
+
 app.get("/api/active-sessions", async (_req, res) => {
   try {
     const sessions = await getCachedSessions();
@@ -748,6 +881,7 @@ async function start(): Promise<void> {
   console.log(`LOAD_EXISTING_MD=${String(loadExistingMd)}`);
   console.log(`EXCLUDE_PATTERN=${excludePatterns.join(",") || "(none)"}`);
   console.log(`FILE_MAX_LIMIT=${String(fileMaxLimit)}`);
+  console.log(`EXPERIMENTAL=${String(experimental)}`);
   console.log(`\nWatching roots:\n- ${roots.join("\n- ")}`);
   const startupUrl = `http://localhost:${runningPort}`;
   // final message should appear last so it's easy to spot and click

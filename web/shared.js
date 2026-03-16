@@ -71,13 +71,33 @@ export function renderSessionList(sessionListEl, sessions, selectedSessionId, on
  * Safe to call multiple times; re-entrant calls are ignored.
  */
 let appMenuInitialized = false;
-export function initAppMenu() {
+let frontendConfigPromise = null;
+
+export async function getFrontendConfig() {
+  if (!frontendConfigPromise) {
+    frontendConfigPromise = fetch("/api/frontend-config")
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        return res.json();
+      })
+      .catch((error) => {
+        console.error("Failed to load frontend config", error);
+        return { experimental: false };
+      });
+  }
+  return frontendConfigPromise;
+}
+
+export async function initAppMenu() {
   if (appMenuInitialized) return;
   const appMenuButton = document.getElementById("app-menu-button");
   const appMenuEl = document.getElementById("app-menu");
   const appMenuContainer = appMenuButton?.closest(".app-menu");
   if (!appMenuButton || !appMenuEl) return;
   appMenuInitialized = true;
+  const { experimental = false } = await getFrontendConfig();
 
   function setAppMenuOpen(isOpen) {
     appMenuEl.hidden = !isOpen;
@@ -88,6 +108,7 @@ export function initAppMenu() {
     { label: "Git Diff", path: "/diff/" },
     { label: "Todos", path: "/todos/" },
     { label: "Events", path: "/events/" },
+    ...(experimental ? [{ label: "Prompt", path: "/prompt/" }] : []),
     { label: "Files", path: "/session-files/" },
     { label: "Checkpoints", path: "/session-checkpoints/" },
     { label: "Research", path: "/session-research/" },
