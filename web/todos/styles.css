@@ -1,27 +1,161 @@
 @import "/shared.css";
 
-#current-session { flex: 1; min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
-#table-select { padding: 6px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+#current-session {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+#table-select {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+}
 #refresh-todos {
   border: 1px solid #ccc;
   border-radius: 6px;
-  background: #fff;
+  background: black;
   padding: 6px 10px;
   cursor: pointer;
 }
-#refresh-todos:hover { background: #f1f3f4; }
-.back-link { font-size: 13px; color: #0066cc; text-decoration: none; white-space: nowrap; }
-.back-link:hover { text-decoration: underline; }
-.data-table td { padding: 8px 12px; border-bottom: 1px solid #eee; vertical-align: top; max-width: 400px; overflow-wrap: break-word; }
+#refresh-todos:hover {
+  background: black;
+}
+.back-link {
+  font-size: 13px;
+  color: #0066cc;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.back-link:hover {
+  text-decoration: underline;
+}
+.data-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #eee;
+  vertical-align: top;
+  max-width: 400px;
+  overflow-wrap: break-word;
+}
 
-.status-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; }
-.status-done, .status-completed { background: #d4edda; color: #155724; }
-.status-in_progress, .status-in-progress, .status-active { background: #fff3cd; color: #856404; }
-.status-pending, .status-todo, .status-open { background: #e2e3e5; color: #383d41; }
-.status-failed, .status-error, .status-blocked { background: #f8d7da; color: #721c24; }
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.status-done,
+.status-completed {
+  background: black;
+  color: #155724;
+}
+.status-in_progress,
+.status-in-progress,
+.status-active {
+  background: black;
+  color: #856404;
+}
+.status-pending,
+.status-todo,
+.status-open {
+  background: black;
+  color: #383d41;
+}
+.status-failed,
+.status-error,
+.status-blocked {
+  background: black;
+  color: #721c24;
+}
 
-.table-section { margin-bottom: 24px; }
-.table-section h3 { margin: 0 0 8px; font-size: 16px; color: #333; border-bottom: 1px solid #eee; padding-bottom: 6px; }
+.table-section {
+  margin-bottom: 24px;
+}
+.table-section h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  color: #333;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 6px;
+}
 
-.empty-state { text-align: center; padding: 40px 20px; color: #888; }
-.empty-state h3 { margin: 0 0 8px; }
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #888;
+}
+.empty-state h3 {
+  margin: 0 0 8px;
+}
+
+.dependency-graph {
+  margin-bottom: 24px;
+  border: 1px solid #e0e4e8;
+  border-radius: 8px;
+  background: black;
+  overflow: hidden;
+}
+.dependency-graph h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+  border-bottom: 1px solid #e0e4e8;
+  padding: 10px 16px;
+}
+.graph-scroll {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 420px;
+  padding: 8px 16px 16px;
+}
+
+/* Edges and arrowheads */
+.graph-edge {
+  stroke: #c8d0da;
+}
+.graph-arrow {
+  fill: #c8d0da;
+}
+
+/* Node base */
+.graph-node {
+  cursor: default;
+}
+.graph-node rect {
+  transition: filter 0.1s;
+}
+.graph-node:hover rect {
+  filter: brightness(0.93);
+}
+
+/* Title and status text — font set here so no inline attributes needed */
+.gn-title {
+  font-size: 12px;
+  font-weight: 600;
+  font-family: system-ui, sans-serif;
+}
+.gn-status {
+  font-size: 11px;
+  font-family: system-ui, sans-serif;
+  color: white;
+}
+
+/* Node fill/stroke colors are applied as inline styles in app.js for reliable cross-browser rendering. */
+
+/* Dark-mode overrides via JS-applied class — container and edges only */
+html.is-dark .dependency-graph {
+  background: black;
+  border-color: #2a2f3a;
+}
+html.is-dark .dependency-graph h3 {
+  color: #c8d0de;
+  border-color: #2a2f3a;
+}
+html.is-dark .graph-edge {
+  stroke: #383e4c;
+}
+html.is-dark .graph-arrow {
+  fill: #383e4c;
+}
