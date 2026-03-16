@@ -123,11 +123,32 @@
 .graph-node {
   cursor: default;
 }
+.graph-node[data-description] {
+  cursor: pointer;
+}
 .graph-node rect {
   transition: filter 0.1s;
 }
 .graph-node:hover rect {
   filter: brightness(0.93);
+}
+
+.graph-tooltip {
+  position: fixed;
+  z-index: 9999;
+  background: #1a1f2e;
+  color: #c8d4e8;
+  border: 1px solid #3a4560;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: system-ui, sans-serif;
+  max-width: 300px;
+  line-height: 1.5;
+  pointer-events: none;
+  white-space: pre-wrap;
+  word-break: break-word;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
 }
 
 /* Title and status text — font set here so no inline attributes needed */
@@ -158,4 +179,72 @@ html.is-dark .graph-edge {
 }
 html.is-dark .graph-arrow {
   fill: #383e4c;
+}
+
+/* Todo node modal */
+.node-modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.55);
+  align-items: center;
+  justify-content: center;
+}
+.node-modal-backdrop.is-open {
+  display: flex;
+}
+.node-modal {
+  background: #1a1f2e;
+  color: #c8d4e8;
+  border: 1px solid #3a4560;
+  border-radius: 10px;
+  width: min(520px, 90vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+.node-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid #2e3650;
+}
+.node-modal-title-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.node-modal-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #e0e8f8;
+}
+.node-modal-close {
+  background: none;
+  border: none;
+  color: #8a9ab8;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.node-modal-close:hover {
+  color: #e0e8f8;
+  background: #2a3045;
+}
+.node-modal-body {
+  padding: 16px;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
 }

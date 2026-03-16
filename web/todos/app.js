@@ -78,13 +78,14 @@ function wrapText(text, maxCharsPerLine, maxLines) {
 function renderDependencyGraph(todosRows, todoDepsRows) {
   if (!todoDepsRows || todoDepsRows.length === 0) return "";
 
-  // Build info map from todos table (id → {title, status})
+  // Build info map from todos table (id → {title, status, description})
   const todoMap = new Map();
   if (todosRows) {
     for (const t of todosRows) {
       todoMap.set(String(t.id), {
         title: String(t.title || t.id || ""),
         status: String(t.status || ""),
+        description: String(t.description || ""),
       });
     }
   }
@@ -216,7 +217,14 @@ function renderDependencyGraph(todosRows, todoDepsRows) {
         : pos.y + (hasStatus ? 18 : 22);
     const statusY = pos.y + (titleLines.length === 1 ? 50 : 54);
 
-    let g = `<g class="graph-node ${sc}" data-id="${escapeHtml(id)}">`;
+    const descAttr = info.description
+      ? ` data-description="${escapeHtml(info.description)}"`
+      : "";
+    const titleAttr = ` data-title="${escapeHtml(info.title || id)}"`;
+    const statusAttr = info.status
+      ? ` data-status="${escapeHtml(info.status)}"`
+      : "";
+    let g = `<g class="graph-node ${sc}" data-id="${escapeHtml(id)}"${titleAttr}${statusAttr}${descAttr}>`;
     g += `<rect x="${pos.x}" y="${pos.y}" width="${NODE_W}" height="${NODE_H}" rx="7" stroke-width="1.5" style="fill:gray;stroke:gray"/>`;
     g += `<text x="${cx}" y="${titleY}" text-anchor="middle" class="gn-title" style="fill:#dde4f0">`;
     for (let i = 0; i < titleLines.length; i++) {
@@ -238,6 +246,118 @@ function renderDependencyGraph(todosRows, todoDepsRows) {
     parts.join("\n") +
     `</svg></div></div>`
   );
+}
+
+let tooltipEl = null;
+function getTooltip() {
+  if (!tooltipEl) {
+    tooltipEl = document.createElement("div");
+    tooltipEl.className = "graph-tooltip";
+    tooltipEl.style.display = "none";
+    document.body.appendChild(tooltipEl);
+  }
+  return tooltipEl;
+}
+
+function positionTooltip(tip, e) {
+  const pad = 14;
+  tip.style.left = `${e.clientX + pad}px`;
+  tip.style.top = `${e.clientY + pad}px`;
+  // Clamp so it doesn't overflow the right/bottom edge
+  const r = tip.getBoundingClientRect();
+  if (r.right > window.innerWidth - pad) {
+    tip.style.left = `${e.clientX - r.width - pad}px`;
+  }
+  if (r.bottom > window.innerHeight - pad) {
+    tip.style.top = `${e.clientY - r.height - pad}px`;
+  }
+}
+
+function attachGraphTooltips() {
+  const tip = getTooltip();
+  const svg = dataViewEl.querySelector(".graph-scroll svg");
+  if (!svg) {
+    tip.style.display = "none";
+    return;
+  }
+  svg.addEventListener("mousemove", (e) => {
+    const node = e.target.closest(".graph-node");
+    const desc = node?.dataset.description;
+    if (desc) {
+      tip.textContent = desc;
+      tip.style.display = "block";
+      positionTooltip(tip, e);
+    } else {
+      tip.style.display = "none";
+    }
+  });
+  svg.addEventListener("mouseleave", () => {
+    tip.style.display = "none";
+  });
+  svg.addEventListener("click", (e) => {
+    const node = e.target.closest(".graph-node");
+    if (!node) return;
+    const desc = node.dataset.description;
+    if (!desc) return;
+    tip.style.display = "none";
+    showNodeModal(
+      node.dataset.title || node.dataset.id || "",
+      node.dataset.status || "",
+      desc,
+    );
+  });
+}
+
+let modalEl = null;
+function getModal() {
+  if (!modalEl) {
+    modalEl = document.createElement("div");
+    modalEl.className = "node-modal-backdrop";
+    modalEl.innerHTML = `
+      <div class="node-modal" role="dialog" aria-modal="true">
+        <div class="node-modal-header">
+          <div class="node-modal-title-wrap">
+            <span class="node-modal-title"></span>
+            <span class="node-modal-status"></span>
+          </div>
+          <button class="node-modal-close" aria-label="Close">✕</button>
+        </div>
+        <div class="node-modal-body"></div>
+      </div>`;
+    modalEl
+      .querySelector(".node-modal-close")
+      .addEventListener("click", closeModal);
+    // Close on backdrop click
+    modalEl.addEventListener("click", (e) => {
+      if (e.target === modalEl) closeModal();
+    });
+    // Close on Escape key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && modalEl.classList.contains("is-open"))
+        closeModal();
+    });
+    document.body.appendChild(modalEl);
+  }
+  return modalEl;
+}
+
+function showNodeModal(title, status, description) {
+  const modal = getModal();
+  modal.querySelector(".node-modal-title").textContent = title;
+  const statusEl = modal.querySelector(".node-modal-status");
+  if (status) {
+    statusEl.textContent = status.replace(/_/g, " ");
+    statusEl.className = `node-modal-status status-badge ${statusClass(status)}`;
+    statusEl.style.display = "";
+  } else {
+    statusEl.style.display = "none";
+  }
+  modal.querySelector(".node-modal-body").textContent = description;
+  modal.classList.add("is-open");
+}
+
+function closeModal() {
+  modalEl?.classList.remove("is-open");
 }
 
 function statusClass(value) {
@@ -371,6 +491,7 @@ async function loadSessionData(sessionId) {
     console.error("Failed to load session data:", error);
     dataViewEl.innerHTML = `<p class="placeholder">Error loading session data.</p>`;
   }
+  attachGraphTooltips();
 }
 
 async function selectSession(sessionId) {
