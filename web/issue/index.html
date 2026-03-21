@@ -3,16 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Copilot Prompt Runner</title>
+    <title>Copilot Issue Creator</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
-    <link rel="stylesheet" href="/prompt/styles.css" />
+    <link rel="stylesheet" href="/issue/styles.css" />
   </head>
   <body>
     <div class="app">
       <aside class="sidebar">
-        <h2>Prompt</h2>
-        <ul id="session-list"></ul>
+        <h2>Issue</h2>
+        <p class="sidebar-hint">Submit an issue description and Copilot CLI will create a GitHub issue in the current repository.</p>
       </aside>
       <div
         class="resizer"
@@ -24,10 +24,9 @@
       ></div>
       <main class="content">
         <div class="toolbar">
-          <span id="current-session">Select a session to run a prompt</span>
+          <span id="current-title">Create a GitHub Issue</span>
           <div id="toolbar-actions">
-            <button id="refresh-sessions" type="button">Refresh</button>
-            <button id="run-prompt" type="button" disabled>Run Prompt</button>
+            <button id="submit-issue" type="button" disabled>Submit Issue</button>
             <div class="app-menu">
               <button id="app-menu-button" type="button" class="icon-button" aria-label="Open app menu" aria-haspopup="true" aria-expanded="false" aria-controls="app-menu">
                 <span class="app-grid-icon" aria-hidden="true">
@@ -40,17 +39,15 @@
           </div>
         </div>
         <div id="data-view">
-          <label for="model-select">Model</label>
-          <select id="model-select" aria-label="Select model">
-            <option value="">Default</option>
-          </select>
-          <label for="prompt-input">Prompt</label>
-          <textarea id="prompt-input" rows="8" placeholder="Enter prompt text for Copilot CLI"></textarea>
-          <p id="status-text" class="placeholder">Select a session and enter a prompt to run.</p>
-          <pre id="prompt-output" class="output-box"></pre>
+          <label for="issue-title">Issue Title</label>
+          <input type="text" id="issue-title" placeholder="Short summary of the issue" maxlength="256" />
+          <label for="issue-body">Issue Description</label>
+          <textarea id="issue-body" rows="10" placeholder="Describe the issue in detail (optional)"></textarea>
+          <p id="status-text" class="placeholder">Enter an issue title and click Submit Issue.</p>
+          <pre id="issue-output" class="output-box"></pre>
         </div>
       </main>
     </div>
-    <script type="module" src="/prompt/app.js"></script>
+    <script type="module" src="/issue/app.js"></script>
   </body>
 </html>

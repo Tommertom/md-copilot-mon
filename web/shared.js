@@ -108,10 +108,11 @@ export async function initAppMenu() {
     { label: "Git Diff", path: "/diff/" },
     { label: "Todos", path: "/todos/" },
     { label: "Events", path: "/events/" },
-    ...(experimental ? [{ label: "Prompt", path: "/prompt/" }] : []),
+    { label: "Prompt", path: "/prompt/" },
     { label: "Files", path: "/session-files/" },
     { label: "Checkpoints", path: "/session-checkpoints/" },
     { label: "Research", path: "/session-research/" },
+    { label: "Issue", path: "/issue/" },
   ];
 
   // Normalise current path to always have a trailing slash.
