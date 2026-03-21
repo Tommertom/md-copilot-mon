@@ -186,6 +186,10 @@ const loadExistingMd = process.env.LOAD_EXISTING_MD !== "false";
 const excludePatterns = parseExcludePatterns(process.env.EXCLUDE_PATTERN);
 const fileMaxLimit = parseFileMaxLimit(process.env.FILE_MAX_LIMIT);
 const experimental = process.env.EXPERIMENTAL === "true";
+const copilotModels = (process.env.COPILOT_MODELS ?? "")
+  .split(",")
+  .map((m) => m.trim())
+  .filter(Boolean);
 const cwd = process.cwd();
 const roots = defaultRoots(cwd);
 const index = new MarkdownIndex(roots, loadExistingMd, excludePatterns);
@@ -297,7 +301,7 @@ async function resolveSession(id: string, res: Response): Promise<SessionInfo | 
 app.use(express.static(webDir));
 
 app.get("/api/frontend-config", (_req, res) => {
-  res.json({ experimental });
+  res.json({ experimental, models: copilotModels });
 });
 
 app.get("/api/files", (_req, res) => {
@@ -538,6 +542,23 @@ app.post("/api/sessions/:id/prompt", promptRateLimiter, async (req, res) => {
     res.status(400).json({ error: "Prompt contains unsupported control characters" });
     return;
   }
+  const model = typeof req.body?.model === "string" ? req.body.model.trim() : "";
+  if (model.length > 256) {
+    res.status(400).json({ error: "Model name is too long (max 256 characters)" });
+    return;
+  }
+  if (model.includes("\u0000")) {
+    res.status(400).json({ error: "Model name contains unsupported control characters" });
+    return;
+  }
+  // When COPILOT_MODELS is configured, only listed models are accepted.
+  // When it is empty, the model selector is hidden in the UI and the model
+  // parameter is expected to be absent; arbitrary values are not validated
+  // so as not to break direct API usage in unconfigured deployments.
+  if (model && copilotModels.length > 0 && !copilotModels.includes(model)) {
+    res.status(400).json({ error: "Requested model is not in the configured models list" });
+    return;
+  }
   try {
     const session = await resolveSession(req.params.id, res);
     if (!session) return;
@@ -561,7 +582,8 @@ app.post("/api/sessions/:id/prompt", promptRateLimiter, async (req, res) => {
       res.status(400).json({ error: "Session workspace directory not found" });
       return;
     }
-    const { stdout } = await execFileAsync("copilot", ["-p", prompt], {
+    const copilotArgs = model ? ["-p", prompt, "--model", model] : ["-p", prompt];
+    const { stdout } = await execFileAsync("copilot", copilotArgs, {
       cwd: sessionCwd,
       maxBuffer: 5 * 1024 * 1024,
       timeout: 5 * 60 * 1000,

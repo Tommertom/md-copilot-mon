@@ -1,17 +1,35 @@
 import { initResizer } from "/resizer.js";
-import { renderSessionList, connectSessionChangeEvents, initAppMenu } from "/shared.js";
+import { renderSessionList, connectSessionChangeEvents, initAppMenu, getFrontendConfig } from "/shared.js";
 
 const sessionListEl = document.getElementById("session-list");
 const currentSessionEl = document.getElementById("current-session");
 const refreshSessionsBtn = document.getElementById("refresh-sessions");
 const runPromptBtn = document.getElementById("run-prompt");
 const promptInputEl = document.getElementById("prompt-input");
+const modelSelectEl = document.getElementById("model-select");
+const modelLabelEl = document.querySelector('label[for="model-select"]');
 const statusTextEl = document.getElementById("status-text");
 const promptOutputEl = document.getElementById("prompt-output");
 
 let sessions = [];
 let selectedSessionId = null;
 let isRunning = false;
+
+async function loadModels() {
+  const { models = [] } = await getFrontendConfig();
+  // Remove any previously added model options (keep the default "Default" option)
+  while (modelSelectEl.options.length > 1) {
+    modelSelectEl.remove(1);
+  }
+  for (const model of models) {
+    const option = document.createElement("option");
+    option.value = model;
+    option.textContent = model;
+    modelSelectEl.appendChild(option);
+  }
+  modelSelectEl.hidden = models.length === 0;
+  if (modelLabelEl) modelLabelEl.hidden = models.length === 0;
+}
 
 function updateRunButton() {
   const hasPrompt = promptInputEl.value.trim().length > 0;
@@ -56,6 +74,7 @@ async function runPrompt() {
   if (!selectedSessionId || isRunning) return;
   const prompt = promptInputEl.value.trim();
   if (!prompt) return;
+  const model = modelSelectEl.value;
   isRunning = true;
   updateRunButton();
   statusTextEl.textContent = "Running prompt...";
@@ -64,7 +83,7 @@ async function runPrompt() {
     const res = await fetch(`/api/sessions/${encodeURIComponent(selectedSessionId)}/prompt`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ prompt, ...(model ? { model } : {}) }),
     });
     if (!res.ok) {
       let message = "Failed to run prompt";
@@ -112,6 +131,7 @@ promptInputEl.addEventListener("keydown", (event) => {
   }
 });
 
+void loadModels();
 void refreshSessions();
 connectSessionChangeEvents(refreshSessions);
 initResizer();

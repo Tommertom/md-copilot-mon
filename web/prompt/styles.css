@@ -22,6 +22,17 @@
   gap: 10px;
 }
 
+#model-select {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #fff;
+  cursor: pointer;
+}
+
 #prompt-input {
   width: 100%;
   min-height: 180px;
