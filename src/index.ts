@@ -536,6 +536,14 @@ app.post("/api/sessions/:id/prompt", promptRateLimiter, async (req, res) => {
     return;
   }
   const model = typeof req.body?.model === "string" ? req.body.model.trim() : "";
+  if (model.length > 256) {
+    res.status(400).json({ error: "Model name is too long (max 256 characters)" });
+    return;
+  }
+  if (model.includes("\u0000")) {
+    res.status(400).json({ error: "Model name contains unsupported control characters" });
+    return;
+  }
   // When COPILOT_MODELS is configured, only listed models are accepted.
   // When it is empty, the model selector is hidden in the UI and the model
   // parameter is expected to be absent; arbitrary values are not validated
