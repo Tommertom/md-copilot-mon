@@ -84,7 +84,7 @@ export async function getFrontendConfig() {
       })
       .catch((error) => {
         console.error("Failed to load frontend config", error);
-        return { experimental: false };
+        return {};
       });
   }
   return frontendConfigPromise;
@@ -97,7 +97,6 @@ export async function initAppMenu() {
   const appMenuContainer = appMenuButton?.closest(".app-menu");
   if (!appMenuButton || !appMenuEl) return;
   appMenuInitialized = true;
-  const { experimental = false } = await getFrontendConfig();
 
   function setAppMenuOpen(isOpen) {
     appMenuEl.hidden = !isOpen;

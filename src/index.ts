@@ -30,8 +30,9 @@ EXCLUDE_PATTERN='"checkpoints/index.md"'
 # Maximum number of most recently updated files sent to the frontend
 FILE_MAX_LIMIT=20
 
-# true: enables experimental frontend features, false: hides them
-EXPERIMENTAL=false
+# Comma-separated list of extra flags appended to every copilot CLI invocation
+# Example: --flag1,--flag2
+COPILOT_FLAGS=
 `;
 
 function ensureEnvFile(): string {
@@ -185,10 +186,13 @@ const autoIncrementPort = process.env.AUTO_INCREMENT_PORT !== "false";
 const loadExistingMd = process.env.LOAD_EXISTING_MD !== "false";
 const excludePatterns = parseExcludePatterns(process.env.EXCLUDE_PATTERN);
 const fileMaxLimit = parseFileMaxLimit(process.env.FILE_MAX_LIMIT);
-const experimental = process.env.EXPERIMENTAL === "true";
 const copilotModels = (process.env.COPILOT_MODELS ?? "")
   .split(",")
   .map((m) => m.trim())
+  .filter(Boolean);
+const copilotFlags = (process.env.COPILOT_FLAGS ?? "")
+  .split(",")
+  .map((f) => f.trim())
   .filter(Boolean);
 const cwd = process.cwd();
 const roots = defaultRoots(cwd);
@@ -196,6 +200,12 @@ const index = new MarkdownIndex(roots, loadExistingMd, excludePatterns);
 const execFileAsync = promisify(execFile);
 const changeClients = new Set<Response>();
 const sessionChangeClients = new Set<Response>();
+
+/** Formats a copilot invocation as a readable command line for logging. */
+function formatCopilotCmd(args: readonly string[]): string {
+  const parts = ["copilot", ...args.map((a) => (/[\s"'\\]/.test(a) ? JSON.stringify(a) : a))];
+  return parts.join(" ");
+}
 
 function registerSseClient(res: Response, clientSet: Set<Response>): void {
   res.setHeader("Content-Type", "text/event-stream");
@@ -301,7 +311,7 @@ async function resolveSession(id: string, res: Response): Promise<SessionInfo | 
 app.use(express.static(webDir));
 
 app.get("/api/frontend-config", (_req, res) => {
-  res.json({ experimental, models: copilotModels });
+  res.json({ models: copilotModels });
 });
 
 app.get("/api/files", (_req, res) => {
@@ -529,25 +539,32 @@ app.get("/api/sessions/:id/events", async (req, res) => {
 });
 
 app.post("/api/sessions/:id/prompt", promptRateLimiter, async (req, res) => {
+  const sessionId = req.params.id;
+  console.log(`[prompt] Request received for session "${sessionId}"`);
   const prompt = typeof req.body?.prompt === "string" ? req.body.prompt.trim() : "";
   if (!prompt) {
+    console.log(`[prompt] Rejected: prompt is empty`);
     res.status(400).json({ error: "Prompt is required" });
     return;
   }
   if (prompt.length > 10_000) {
+    console.log(`[prompt] Rejected: prompt too long (${prompt.length} chars)`);
     res.status(400).json({ error: "Prompt is too long (max 10000 characters)" });
     return;
   }
   if (prompt.includes("\u0000")) {
+    console.log(`[prompt] Rejected: prompt contains null bytes`);
     res.status(400).json({ error: "Prompt contains unsupported control characters" });
     return;
   }
   const model = typeof req.body?.model === "string" ? req.body.model.trim() : "";
   if (model.length > 256) {
+    console.log(`[prompt] Rejected: model name too long (${model.length} chars)`);
     res.status(400).json({ error: "Model name is too long (max 256 characters)" });
     return;
   }
   if (model.includes("\u0000")) {
+    console.log(`[prompt] Rejected: model name contains null bytes`);
     res.status(400).json({ error: "Model name contains unsupported control characters" });
     return;
   }
@@ -556,47 +573,62 @@ app.post("/api/sessions/:id/prompt", promptRateLimiter, async (req, res) => {
   // parameter is expected to be absent; arbitrary values are not validated
   // so as not to break direct API usage in unconfigured deployments.
   if (model && copilotModels.length > 0 && !copilotModels.includes(model)) {
+    console.log(`[prompt] Rejected: model "${model}" not in configured models list`);
     res.status(400).json({ error: "Requested model is not in the configured models list" });
     return;
   }
+  console.log(`[prompt] Validated — promptLength=${prompt.length} model=${model || "(default)"}`);
   try {
     const session = await resolveSession(req.params.id, res);
-    if (!session) return;
+    if (!session) {
+      console.log(`[prompt] Rejected: session "${sessionId}" not found`);
+      return;
+    }
     const sessionCwd = session.workspace?.cwd?.trim();
     if (!sessionCwd) {
+      console.log(`[prompt] Rejected: session "${sessionId}" has no workspace cwd`);
       res.status(400).json({ error: "Session workspace cwd not found" });
       return;
     }
+    console.log(`[prompt] Session resolved — cwd="${sessionCwd}"`);
     let cwdStats;
     try {
       cwdStats = await fs.stat(sessionCwd);
     } catch (fsError) {
       const typedFsError = fsError as NodeJS.ErrnoException;
       if (typedFsError.code === "ENOENT") {
+        console.log(`[prompt] Rejected: workspace directory not found: "${sessionCwd}"`);
         res.status(400).json({ error: "Session workspace directory not found" });
         return;
       }
       throw fsError;
     }
     if (!cwdStats.isDirectory()) {
+      console.log(`[prompt] Rejected: workspace path is not a directory: "${sessionCwd}"`);
       res.status(400).json({ error: "Session workspace directory not found" });
       return;
     }
-    const copilotArgs = model ? ["-p", prompt, "--model", model] : ["-p", prompt];
+    const copilotArgs = model ? ["-p", prompt, "--model", model, ...copilotFlags] : ["-p", prompt, ...copilotFlags];
+    console.log(`[prompt] Spawning: ${formatCopilotCmd(copilotArgs)} (cwd="${sessionCwd}")`);
     const { stdout } = await execFileAsync("copilot", copilotArgs, {
       cwd: sessionCwd,
       maxBuffer: 5 * 1024 * 1024,
       timeout: 5 * 60 * 1000,
       encoding: "utf8"
     });
+    console.log(`[prompt] Copilot completed — stdout=${stdout.length} chars`);
     res.json({ output: stdout, directory: toDisplayPath(sessionCwd) });
   } catch (error) {
     const typedError = error as NodeJS.ErrnoException & { stdout?: string; stderr?: string };
     if (typedError.code === "ENOENT") {
+      console.error(`[prompt] Error: copilot CLI not found on PATH`);
       res.status(500).json({ error: "Copilot CLI not found on server PATH" });
       return;
     }
     if (typeof typedError.code === "number") {
+      console.error(`[prompt] Copilot exited with code ${typedError.code}`);
+      if (typedError.stderr) console.error(`[prompt] stderr:\n${typedError.stderr}`);
+      if (typedError.stdout) console.error(`[prompt] stdout:\n${typedError.stdout}`);
       const output = [
         typeof typedError.stderr === "string" && typedError.stderr.trim().length > 0
           ? `stderr:\n${typedError.stderr}`
@@ -610,6 +642,7 @@ app.post("/api/sessions/:id/prompt", promptRateLimiter, async (req, res) => {
       res.status(400).json({ error: output || typedError.message });
       return;
     }
+    console.error(`[prompt] Unexpected error:`, typedError);
     res.status(500).json({ error: typedError.message });
   }
 });
@@ -828,7 +861,9 @@ app.post("/api/files/:id/execute-plan", executePlanRateLimiter, (req, res) => {
     res.status(400).json({ error: "Invalid session ID format in file path" });
     return;
   }
-  const child = spawn("copilot", ["-p", sessionId, "Execute the plan plan.md", "--tools", "all", "--paths", "/"], {
+  const execPlanArgs = ["-p", sessionId, "Execute the plan plan.md", "--tools", "all", "--paths", "/", ...copilotFlags];
+  console.log(`[execute-plan] Spawning: ${formatCopilotCmd(execPlanArgs)}`);
+  const child = spawn("copilot", execPlanArgs, {
     detached: true,
     stdio: "ignore"
   });
@@ -854,42 +889,55 @@ app.get("/api/active-sessions", async (_req, res) => {
 });
 
 app.post("/api/issues", issueRateLimiter, async (req, res) => {
+  console.log(`[issue] Request received`);
   const title = typeof req.body?.title === "string" ? req.body.title.trim() : "";
   const body = typeof req.body?.body === "string" ? req.body.body.trim() : "";
   if (!title) {
+    console.log(`[issue] Rejected: title is empty`);
     res.status(400).json({ error: "Issue title is required" });
     return;
   }
   if (title.length > 256) {
+    console.log(`[issue] Rejected: title too long (${title.length} chars)`);
     res.status(400).json({ error: "Issue title is too long (max 256 characters)" });
     return;
   }
   if (body.length > 65_536) {
+    console.log(`[issue] Rejected: body too long (${body.length} chars)`);
     res.status(400).json({ error: "Issue body is too long (max 65536 characters)" });
     return;
   }
   if (title.includes("\u0000") || body.includes("\u0000")) {
+    console.log(`[issue] Rejected: title or body contains null bytes`);
     res.status(400).json({ error: "Issue contains unsupported control characters" });
     return;
   }
+  console.log(`[issue] Validated — title="${title}" bodyLength=${body.length}`);
   const bodySection = body ? `\n\nDescription:\n${body}` : "";
   const safeTitle = title.replaceAll('"', '\\"');
   const prompt = `Create a GitHub issue in the current repository with the following details. Title: "${safeTitle}".${bodySection}\n\nUse the gh CLI to create the issue and output the resulting issue URL.`;
+  const issueArgs = ["-p", prompt, ...copilotFlags];
+  console.log(`[issue] Spawning: ${formatCopilotCmd(issueArgs)} (cwd="${cwd}")`);
   try {
-    const { stdout } = await execFileAsync("copilot", ["-p", prompt], {
+    const { stdout } = await execFileAsync("copilot", issueArgs, {
       cwd,
       maxBuffer: 5 * 1024 * 1024,
       timeout: 5 * 60 * 1000,
       encoding: "utf8"
     });
+    console.log(`[issue] Copilot completed — stdout=${stdout.length} chars`);
     res.json({ output: stdout });
   } catch (error) {
     const typedError = error as NodeJS.ErrnoException & { stdout?: string; stderr?: string };
     if (typedError.code === "ENOENT") {
+      console.error(`[issue] Error: copilot CLI not found on PATH`);
       res.status(500).json({ error: "Copilot CLI not found on server PATH" });
       return;
     }
     if (typeof typedError.code === "number") {
+      console.error(`[issue] Copilot exited with code ${typedError.code}`);
+      if (typedError.stderr) console.error(`[issue] stderr:\n${typedError.stderr}`);
+      if (typedError.stdout) console.error(`[issue] stdout:\n${typedError.stdout}`);
       const output = [
         typeof typedError.stderr === "string" && typedError.stderr.trim().length > 0
           ? `stderr:\n${typedError.stderr}`
@@ -903,6 +951,7 @@ app.post("/api/issues", issueRateLimiter, async (req, res) => {
       res.status(400).json({ error: `Copilot CLI exited with error${output ? `:\n${output}` : ""}` });
       return;
     }
+    console.error(`[issue] Unexpected error:`, typedError);
     res.status(500).json({ error: (typedError as Error).message });
   }
 });
@@ -964,7 +1013,7 @@ async function start(): Promise<void> {
   console.log(`LOAD_EXISTING_MD=${String(loadExistingMd)}`);
   console.log(`EXCLUDE_PATTERN=${excludePatterns.join(",") || "(none)"}`);
   console.log(`FILE_MAX_LIMIT=${String(fileMaxLimit)}`);
-  console.log(`EXPERIMENTAL=${String(experimental)}`);
+  console.log(`COPILOT_FLAGS=${copilotFlags.join(",") || "(none)"}`);
   console.log(`\nWatching roots:\n- ${roots.join("\n- ")}`);
   const startupUrl = `http://localhost:${runningPort}`;
   // final message should appear last so it's easy to spot and click

@@ -1,5 +1,4 @@
 import { initResizer } from "/resizer.js";
-import { getFrontendConfig } from "/shared.js";
 
 const fileListEl = document.getElementById("file-list");
 const searchInputEl = document.getElementById("file-search");
@@ -24,6 +23,8 @@ const menuOpenSessionCheckpointsBtn = document.getElementById(
 const menuOpenSessionResearchBtn = document.getElementById(
   "menu-open-session-research",
 );
+const menuOpenIssueBtn = document.getElementById("menu-open-issue");
+const menuOpenPromptBtn = document.getElementById("menu-open-prompt");
 const saveBtn = document.getElementById("save-file");
 const executePlanBtn = document.getElementById("execute-plan");
 
@@ -51,7 +52,6 @@ let selectedId = null;
 let loadedId = null;
 let searchQuery = "";
 let initialized = false;
-let experimentalEnabled = false;
 let loadedMarkdown = "";
 let isSaving = false;
 let mermaidCounter = 0;
@@ -262,7 +262,7 @@ async function loadPreview(id) {
   copyMdBtn.disabled = false;
   pasteMdBtn.disabled = false;
   downloadDocxBtn.disabled = false;
-  executePlanBtn.hidden = !experimentalEnabled || !isPlanFile(data.path);
+  executePlanBtn.hidden = !isPlanFile(data.path);
   updateSaveButtonState();
 }
 
@@ -395,6 +395,14 @@ function openSessionResearchWindow() {
   openSubappWindow("/session-research/");
 }
 
+function openIssueWindow() {
+  openSubappWindow("/issue/");
+}
+
+function openPromptWindow() {
+  openSubappWindow("/prompt/");
+}
+
 appMenuButton.addEventListener("click", (event) => {
   event.stopPropagation();
   const isOpen = appMenuEl.hidden === false;
@@ -434,6 +442,16 @@ menuOpenSessionCheckpointsBtn.addEventListener("click", () => {
 menuOpenSessionResearchBtn.addEventListener("click", () => {
   setAppMenuOpen(false);
   openSessionResearchWindow();
+});
+
+menuOpenIssueBtn.addEventListener("click", () => {
+  setAppMenuOpen(false);
+  openIssueWindow();
+});
+
+menuOpenPromptBtn.addEventListener("click", () => {
+  setAppMenuOpen(false);
+  openPromptWindow();
 });
 
 document.addEventListener("click", (event) => {
@@ -531,13 +549,6 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-try {
-  const frontendConfig = await getFrontendConfig();
-  experimentalEnabled = frontendConfig.experimental === true;
-} catch (error) {
-  console.error("Failed to initialize frontend config", error);
-  experimentalEnabled = false;
-}
 refreshFiles();
 
 let reconnectTimer = null;
