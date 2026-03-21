@@ -16,7 +16,7 @@ let selectedSessionId = null;
 let isRunning = false;
 
 async function loadModels() {
-  const { models = [] } = await getFrontendConfig();
+  const { models = [], defaultModel = "" } = await getFrontendConfig();
   // Remove any previously added model options (keep the default "Default" option)
   while (modelSelectEl.options.length > 1) {
     modelSelectEl.remove(1);
@@ -29,6 +29,9 @@ async function loadModels() {
   }
   modelSelectEl.hidden = models.length === 0;
   if (modelLabelEl) modelLabelEl.hidden = models.length === 0;
+  if (defaultModel && models.includes(defaultModel)) {
+    modelSelectEl.value = defaultModel;
+  }
 }
 
 function updateRunButton() {

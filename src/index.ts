@@ -10,6 +10,7 @@ import {
   excludePatterns,
   fileMaxLimit,
   copilotModels,
+  copilotDefaultModel,
   copilotFlags
 } from "./config.js";
 import { registerSseClient, broadcastSse } from "./sse.js";
@@ -49,11 +50,11 @@ app.use(express.static(webDir));
 
 app.use("/api/files", createFilesRouter({ index, fileMaxLimit, copilotFlags }));
 app.use("/api", createGitRouter({ getCachedSessions, cwd }));
-app.use("/api", createSessionsRouter({ getCachedSessions, copilotModels, copilotFlags }));
-app.use("/api", createIssuesRouter({ cwd, copilotFlags }));
+app.use("/api", createSessionsRouter({ getCachedSessions, copilotModels, copilotDefaultModel, copilotFlags }));
+app.use("/api", createIssuesRouter({ cwd, copilotDefaultModel, copilotFlags }));
 
 app.get("/api/frontend-config", (_req, res) => {
-  res.json({ models: copilotModels });
+  res.json({ models: copilotModels, defaultModel: copilotDefaultModel });
 });
 
 app.get("/api/changes", (_req, res) => {

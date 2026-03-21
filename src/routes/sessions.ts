@@ -27,6 +27,7 @@ const execFileAsync = promisify(execFile);
 export type SessionsRouterDeps = {
   getCachedSessions: () => Promise<SessionInfo[]>;
   copilotModels: readonly string[];
+  copilotDefaultModel: string;
   copilotFlags: readonly string[];
 };
 
@@ -45,7 +46,7 @@ async function resolveSession(
 }
 
 export function createSessionsRouter(deps: SessionsRouterDeps): Router {
-  const { getCachedSessions, copilotModels, copilotFlags } = deps;
+  const { getCachedSessions, copilotModels, copilotDefaultModel, copilotFlags } = deps;
   const router = Router();
 
   router.get("/sessions", async (_req, res) => {
@@ -161,7 +162,8 @@ export function createSessionsRouter(deps: SessionsRouterDeps): Router {
         res.status(400).json({ error: "Session workspace directory not found" });
         return;
       }
-      const copilotArgs = model ? ["-p", prompt, "--model", model, ...copilotFlags] : ["-p", prompt, ...copilotFlags];
+      const effectiveModel = model || copilotDefaultModel;
+      const copilotArgs = effectiveModel ? ["-p", prompt, "--model", effectiveModel, ...copilotFlags] : ["-p", prompt, ...copilotFlags];
       console.log(`[prompt] Spawning: ${formatCopilotCmd(copilotArgs)} (cwd="${sessionCwd}")`);
       const { stdout } = await execFileAsync("copilot", copilotArgs, {
         cwd: sessionCwd,

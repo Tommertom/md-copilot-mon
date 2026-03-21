@@ -23,6 +23,15 @@ FILE_MAX_LIMIT=20
 # Comma-separated list of extra flags appended to every copilot CLI invocation
 # Example: --flag1,--flag2
 COPILOT_FLAGS=
+
+# Comma-separated list of Copilot CLI model names available in the Prompt app
+# Example: gpt-4.1,claude-opus-4-5,o3
+COPILOT_MODELS=
+
+# Default model used for CLI spawning when no model is explicitly selected
+# Must be one of the models listed in COPILOT_MODELS (if COPILOT_MODELS is set)
+# Example: claude-opus-4.5
+COPILOT_DEFAULT_MODEL=
 `;
 
 function ensureEnvFile(): string {
@@ -72,6 +81,7 @@ export const copilotModels = (process.env.COPILOT_MODELS ?? "")
   .split(",")
   .map((m) => m.trim())
   .filter(Boolean);
+export const copilotDefaultModel = (process.env.COPILOT_DEFAULT_MODEL ?? "").trim();
 export const copilotFlags = (process.env.COPILOT_FLAGS ?? "")
   .split(",")
   .map((f) => f.trim())

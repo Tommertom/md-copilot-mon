@@ -8,11 +8,12 @@ const execFileAsync = promisify(execFile);
 
 export type IssuesRouterDeps = {
   cwd: string;
+  copilotDefaultModel: string;
   copilotFlags: readonly string[];
 };
 
 export function createIssuesRouter(deps: IssuesRouterDeps): Router {
-  const { cwd, copilotFlags } = deps;
+  const { cwd, copilotDefaultModel, copilotFlags } = deps;
   const router = Router();
 
   router.post("/issues", issueRateLimiter, async (req, res) => {
@@ -43,7 +44,9 @@ export function createIssuesRouter(deps: IssuesRouterDeps): Router {
     const bodySection = body ? `\n\nDescription:\n${body}` : "";
     const safeTitle = title.replaceAll('"', '\\"');
     const prompt = `Create a GitHub issue in the current repository with the following details. Title: "${safeTitle}".${bodySection}\n\nRefine the description using your knowledge of the project and where needed, add clarifying questions to the description. Use the gh CLI to create the issue and output the resulting issue URL.`;
-    const issueArgs = ["-p", prompt, ...copilotFlags];
+    const issueArgs = copilotDefaultModel
+      ? ["-p", prompt, "--model", copilotDefaultModel, ...copilotFlags]
+      : ["-p", prompt, ...copilotFlags];
     console.log(`[issue] Spawning: ${formatCopilotCmd(issueArgs)} (cwd="${toDisplayPath(cwd)}")`);
     try {
       const { stdout } = await execFileAsync("copilot", issueArgs, {
