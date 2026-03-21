@@ -50,7 +50,9 @@ async function submitIssue() {
     issueBodyEl.value = "";
     updateSubmitButton();
   } catch (error) {
-    statusTextEl.textContent = `Failed to create issue: ${error instanceof Error ? error.message : String(error)}`;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    statusTextEl.textContent = "Failed to create issue.";
+    issueOutputEl.textContent = errorMessage;
   } finally {
     isSubmitting = false;
     updateSubmitButton();

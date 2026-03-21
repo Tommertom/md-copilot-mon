@@ -878,7 +878,7 @@ app.post("/api/issues", issueRateLimiter, async (req, res) => {
       ]
         .filter((value): value is string => value.length > 0)
         .join("\n");
-      res.status(500).json({ error: `Copilot CLI exited with error${output ? `:\n${output}` : ""}` });
+      res.status(400).json({ error: `Copilot CLI exited with error${output ? `:\n${output}` : ""}` });
       return;
     }
     res.status(500).json({ error: (typedError as Error).message });
