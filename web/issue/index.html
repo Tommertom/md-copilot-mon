@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Copilot Issue Creator</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="stylesheet" href="/issue/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <h2>Issue</h2>
+        <p class="sidebar-hint">Submit an issue description and Copilot CLI will create a GitHub issue in the current repository.</p>
+      </aside>
+      <div
+        class="resizer"
+        id="sidebar-resizer"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize sidebar"
+        tabindex="0"
+      ></div>
+      <main class="content">
+        <div class="toolbar">
+          <span id="current-title">Create a GitHub Issue</span>
+          <div id="toolbar-actions">
+            <button id="submit-issue" type="button">Submit Issue</button>
+            <div class="app-menu">
+              <button id="app-menu-button" type="button" class="icon-button" aria-label="Open app menu" aria-haspopup="true" aria-expanded="false" aria-controls="app-menu">
+                <span class="app-grid-icon" aria-hidden="true">
+                  <span></span><span></span><span></span>
+                  <span></span><span></span><span></span>
+                </span>
+              </button>
+              <div id="app-menu" class="menu-popup" hidden></div>
+            </div>
+          </div>
+        </div>
+        <div id="data-view">
+          <label for="issue-title">Issue Title</label>
+          <input type="text" id="issue-title" placeholder="Short summary of the issue" maxlength="256" />
+          <label for="issue-body">Issue Description</label>
+          <textarea id="issue-body" rows="10" placeholder="Describe the issue in detail (optional)"></textarea>
+          <p id="status-text" class="placeholder">Enter an issue title and click Submit Issue.</p>
+          <pre id="issue-output" class="output-box"></pre>
+        </div>
+      </main>
+    </div>
+    <script type="module" src="/issue/app.js"></script>
+  </body>
+</html>

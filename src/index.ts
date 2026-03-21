@@ -252,6 +252,13 @@ const executePlanRateLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: "Too many execute-plan requests, please retry shortly" }
 });
+const issueRateLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many issue requests, please retry shortly" }
+});
 
 function createHttpError(httpStatus: number, message: string): Error & { httpStatus: number } {
   const error = new Error(message) as Error & { httpStatus: number };
@@ -821,6 +828,60 @@ app.get("/api/active-sessions", async (_req, res) => {
     res.json({ sessions: uniqueIds });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+app.post("/api/issues", issueRateLimiter, async (req, res) => {
+  const title = typeof req.body?.title === "string" ? req.body.title.trim() : "";
+  const body = typeof req.body?.body === "string" ? req.body.body.trim() : "";
+  if (!title) {
+    res.status(400).json({ error: "Issue title is required" });
+    return;
+  }
+  if (title.length > 256) {
+    res.status(400).json({ error: "Issue title is too long (max 256 characters)" });
+    return;
+  }
+  if (body.length > 65_536) {
+    res.status(400).json({ error: "Issue body is too long (max 65536 characters)" });
+    return;
+  }
+  if (title.includes("\u0000") || body.includes("\u0000")) {
+    res.status(400).json({ error: "Issue contains unsupported control characters" });
+    return;
+  }
+  const bodySection = body ? `\n\nDescription:\n${body}` : "";
+  const safeTitle = title.replaceAll('"', '\\"');
+  const prompt = `Create a GitHub issue in the current repository with the following details. Title: "${safeTitle}".${bodySection}\n\nUse the gh CLI to create the issue and output the resulting issue URL.`;
+  try {
+    const { stdout } = await execFileAsync("copilot", ["-p", prompt], {
+      cwd,
+      maxBuffer: 5 * 1024 * 1024,
+      timeout: 5 * 60 * 1000,
+      encoding: "utf8"
+    });
+    res.json({ output: stdout });
+  } catch (error) {
+    const typedError = error as NodeJS.ErrnoException & { stdout?: string; stderr?: string };
+    if (typedError.code === "ENOENT") {
+      res.status(500).json({ error: "Copilot CLI not found on server PATH" });
+      return;
+    }
+    if (typeof typedError.code === "number") {
+      const output = [
+        typeof typedError.stderr === "string" && typedError.stderr.trim().length > 0
+          ? `stderr:\n${typedError.stderr}`
+          : "",
+        typeof typedError.stdout === "string" && typedError.stdout.trim().length > 0
+          ? `stdout:\n${typedError.stdout}`
+          : ""
+      ]
+        .filter((value): value is string => value.length > 0)
+        .join("\n");
+      res.status(500).json({ error: `Copilot CLI exited with error${output ? `:\n${output}` : ""}` });
+      return;
+    }
+    res.status(500).json({ error: (typedError as Error).message });
   }
 });
 
