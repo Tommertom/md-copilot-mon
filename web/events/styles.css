@@ -1,9 +1,26 @@
 @import "/shared.css";
 
-#current-session { flex: 1; min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
-.toolbar { align-items: flex-start; }
-.toolbar-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
-.view-tabs { display: flex; align-items: center; gap: 8px; }
+#current-session {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+.toolbar {
+  align-items: flex-start;
+}
+.toolbar-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.view-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .view-tab {
   border: 1px solid #ccc;
   border-radius: 999px;
@@ -12,7 +29,9 @@
   cursor: pointer;
   font-size: 13px;
 }
-.view-tab:hover { background: #f7f8fa; }
+.view-tab:hover {
+  background: #f7f8fa;
+}
 .view-tab.active {
   background: #eef4ff;
   border-color: #9bb8ff;
@@ -27,14 +46,18 @@
   cursor: pointer;
 }
 #refresh-events:hover,
-#toggle-sort:hover { background: #f1f3f4; }
+#toggle-sort:hover {
+  background: #f1f3f4;
+}
 #refresh-events.active {
   background: #eef4ff;
   border-color: #9bb8ff;
   color: #1d4fbf;
 }
 
-#search-bar-container { margin-bottom: 12px; }
+#search-bar-container {
+  margin-bottom: 12px;
+}
 #event-search {
   width: 100%;
   padding: 7px 12px;
@@ -42,7 +65,11 @@
   border-radius: 6px;
   font-size: 14px;
 }
-#event-search:focus { outline: none; border-color: #9bb8ff; box-shadow: 0 0 0 2px #eef4ff; }
+#event-search:focus {
+  outline: none;
+  border-color: #9bb8ff;
+  box-shadow: 0 0 0 2px #eef4ff;
+}
 
 .summary-grid {
   display: grid;
@@ -56,18 +83,52 @@
   padding: 10px 12px;
   background: #fff;
 }
-.summary-label { color: #555; font-size: 12px; margin-bottom: 4px; }
-.summary-value { font-size: 18px; font-weight: 700; }
+.summary-label {
+  color: #555;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+.summary-value {
+  font-size: 18px;
+  font-weight: 700;
+}
 
-.timeline { display: flex; flex-direction: column; gap: 10px; }
-.timeline-divider { display: flex; align-items: center; gap: 8px; color: #999; font-size: 11px; margin: 4px 0; }
-.timeline-divider::before, .timeline-divider::after { content: ""; flex: 1; border-top: 1px solid #e0e0e0; }
-.timeline-divider span { white-space: nowrap; }
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.timeline-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #999;
+  font-size: 11px;
+  margin: 4px 0;
+}
+.timeline-divider::before,
+.timeline-divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid #e0e0e0;
+}
+.timeline-divider span {
+  white-space: nowrap;
+}
 .timeline-item {
   border: 1px solid #e8e8e8;
   border-radius: 8px;
   padding: 10px 12px;
   background: #fff;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.timeline-item:hover {
+  background: #f5f5f5;
+}
+.timeline-item.copied {
+  background: #e6f4ea;
+  border-color: #81c784;
 }
 .timeline-head {
   display: flex;
@@ -75,24 +136,89 @@
   justify-content: space-between;
   gap: 10px;
 }
-.timeline-title { font-weight: 600; }
-.timeline-type { color: #666; font-size: 12px; white-space: nowrap; }
-.timeline-detail { margin-top: 6px; font-size: 13px; line-height: 1.4; white-space: pre-wrap; }
+.timeline-title {
+  font-weight: 600;
+}
+.timeline-type {
+  color: #666;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.timeline-detail {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
 
-.timeline-detail.rendered-markdown { white-space: normal; }
-.timeline-detail.rendered-markdown p { margin: 0 0 8px 0; }
-.timeline-detail.rendered-markdown p:last-child { margin-bottom: 0; }
+.timeline-detail.rendered-markdown {
+  white-space: normal;
+}
+.timeline-detail.rendered-markdown p {
+  margin: 0 0 8px 0;
+}
+.timeline-detail.rendered-markdown p:last-child {
+  margin-bottom: 0;
+}
 .timeline-detail.rendered-markdown h1,
 .timeline-detail.rendered-markdown h2,
-.timeline-detail.rendered-markdown h3 { margin: 8px 0 4px 0; font-size: 14px; font-weight: 700; }
+.timeline-detail.rendered-markdown h3 {
+  margin: 8px 0 4px 0;
+  font-size: 14px;
+  font-weight: 700;
+}
 .timeline-detail.rendered-markdown ul,
-.timeline-detail.rendered-markdown ol { margin: 0 0 8px 0; padding-left: 20px; }
-.timeline-detail.rendered-markdown li { margin-bottom: 2px; }
-.timeline-detail.rendered-markdown code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
-.timeline-detail.rendered-markdown pre { background: #f3f4f6; padding: 8px 10px; border-radius: 4px; overflow-x: auto; margin: 0 0 8px 0; }
-.timeline-detail.rendered-markdown pre code { background: none; padding: 0; }
-.timeline-detail.rendered-markdown blockquote { margin: 0 0 8px 0; padding-left: 10px; border-left: 3px solid #d0d7de; color: #57606a; }
+.timeline-detail.rendered-markdown ol {
+  margin: 0 0 8px 0;
+  padding-left: 20px;
+}
+.timeline-detail.rendered-markdown li {
+  margin-bottom: 2px;
+}
+.timeline-detail.rendered-markdown code {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  background: #f3f4f6;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+.timeline-detail.rendered-markdown pre {
+  background: #f3f4f6;
+  padding: 8px 10px;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 0 0 8px 0;
+}
+.timeline-detail.rendered-markdown pre code {
+  background: none;
+  padding: 0;
+}
+.timeline-detail.rendered-markdown blockquote {
+  margin: 0 0 8px 0;
+  padding-left: 10px;
+  border-left: 3px solid #d0d7de;
+  color: #57606a;
+}
 
-.data-table td { padding: 8px 12px; border-bottom: 1px solid #eee; vertical-align: top; max-width: 400px; overflow-wrap: break-word; }
-.json-cell { white-space: pre-wrap; margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px; }
-.raw-toolbar { display: flex; justify-content: flex-end; padding: 6px 8px; }
+.data-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #eee;
+  vertical-align: top;
+  max-width: 400px;
+  overflow-wrap: break-word;
+}
+.json-cell {
+  white-space: pre-wrap;
+  margin: 0;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: 12px;
+}
+.raw-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px 8px;
+}

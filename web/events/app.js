@@ -24,6 +24,7 @@ let selectedView = "rendered";
 let sortDirection = "desc";
 let searchQuery = "";
 let loadedEvents = [];
+let currentTimelineEvents = [];
 const sessionEventsCache = new Map();
 let autoRefresh = false;
 let autoRefreshInterval = null;
@@ -316,8 +317,10 @@ function renderStats(events) {
 
 function renderTimeline(events) {
   if (!Array.isArray(events) || events.length === 0) {
+    currentTimelineEvents = [];
     return `<p class="placeholder">No events found for this session.</p>`;
   }
+  currentTimelineEvents = events;
   const toolNamesByCallId = new Map();
   for (const event of events) {
     if (event?.type === "tool.execution_start" && event?.data?.toolCallId) {
@@ -328,8 +331,11 @@ function renderTimeline(events) {
     }
   }
   const timeline = events
-    .map((event) => toTimelineEntry(event, toolNamesByCallId))
-    .map((entry) => {
+    .map((event, index) => ({
+      entry: toTimelineEntry(event, toolNamesByCallId),
+      index,
+    }))
+    .map(({ entry, index }) => {
       if (
         entry.type === "assistant.turn_start" ||
         entry.type === "assistant.turn_end" ||
@@ -343,7 +349,7 @@ function renderTimeline(events) {
         ? `<div class="timeline-detail rendered-markdown">${DOMPurify.sanitize(marked.parse(entry.renderedContent))}</div>`
         : `<div class="timeline-detail">${escapeHtml(entry.detail || "")}</div>`;
       return `
-      <article class="timeline-item">
+      <article class="timeline-item" data-event-idx="${index}">
         <div class="timeline-head">
           <div class="timeline-title">${escapeHtml(entry.title)}</div>
           <div class="timeline-type">${escapeHtml(entry.time)}${entry.time ? " · " : ""}${escapeHtml(entry.type)}</div>
@@ -511,7 +517,20 @@ timelineContainerEl.addEventListener("click", (event) => {
         btn.textContent = original;
       }, 1500);
     });
+    return;
   }
+
+  const article = event.target.closest(".timeline-item[data-event-idx]");
+  if (!article) return;
+  const idx = Number(article.dataset.eventIdx);
+  const eventData = currentTimelineEvents[idx];
+  if (!eventData) return;
+  void navigator.clipboard
+    .writeText(JSON.stringify(eventData, null, 2))
+    .then(() => {
+      article.classList.add("copied");
+      setTimeout(() => article.classList.remove("copied"), 1000);
+    });
 });
 
 refreshEventsBtn.addEventListener("click", () => {
