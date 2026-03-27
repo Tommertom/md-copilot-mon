@@ -259,6 +259,37 @@ function toTimelineEntry(event, toolNamesByCallId) {
     };
   }
 
+  if (type === "subagent.started") {
+    const displayName = data.agentDisplayName || data.agentName || "unknown";
+    const description = data.agentDescription || "";
+    return {
+      type,
+      time,
+      title: `Subagent started: ${displayName}`,
+      detail: description,
+    };
+  }
+
+  if (type === "subagent.completed") {
+    const displayName = data.agentDisplayName || data.agentName || "unknown";
+    const totalToolCalls = data.totalToolCalls ?? "?";
+    const durationMs =
+      typeof data.durationMs === "number" ? data.durationMs : null;
+    let duration = "?";
+    if (durationMs !== null) {
+      const totalSeconds = Math.round(durationMs / 1000);
+      const mins = Math.floor(totalSeconds / 60);
+      const secs = totalSeconds % 60;
+      duration = `${mins}:${String(secs).padStart(2, "0")}`;
+    }
+    return {
+      type,
+      time,
+      title: `Subagent completed: ${displayName}`,
+      detail: `Tool calls: ${totalToolCalls} · Duration: ${duration}`,
+    };
+  }
+
   return {
     type,
     time,
