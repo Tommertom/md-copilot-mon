@@ -82,12 +82,12 @@
   gap: 24px;
 }
 
-#record-btn,
-#stop-btn {
+#mic-btn {
   width: 80px;
   height: 80px;
   border-radius: 50%;
   border: none;
+  background: #e53e3e;
   color: #fff;
   font-size: 12px;
   font-weight: 600;
@@ -100,27 +100,27 @@
   transition: background 0.15s, transform 0.1s;
 }
 
-#record-btn {
-  background: #e53e3e;
-}
-
-#record-btn:hover {
+#mic-btn:hover {
   background: #c53030;
 }
 
-#record-btn:disabled {
+#mic-btn:disabled {
   background: #ccc;
   cursor: not-allowed;
 }
 
-#record-btn:focus-visible {
+#mic-btn:focus-visible {
   outline: 2px solid #4b8df8;
   outline-offset: 3px;
 }
 
-/* Pulsing animation on stop button while recording is active */
-#stop-btn.recording {
+#mic-btn.recording {
+  background: #718096;
   animation: mic-pulse 1.5s ease-in-out infinite;
+}
+
+#mic-btn.recording:hover {
+  background: #4a5568;
 }
 
 @keyframes mic-pulse {
@@ -132,19 +132,6 @@
     transform: scale(1.06);
     box-shadow: 0 0 0 10px rgba(229, 62, 62, 0);
   }
-}
-
-#stop-btn {
-  background: #718096;
-}
-
-#stop-btn:hover {
-  background: #4a5568;
-}
-
-#stop-btn:focus-visible {
-  outline: 2px solid #4b8df8;
-  outline-offset: 3px;
 }
 
 /* Transcribing indicator */

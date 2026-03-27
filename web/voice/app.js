@@ -1,8 +1,10 @@
 import { initAppMenu } from '/shared.js';
 
 // DOM refs
-const recordBtn = document.getElementById('record-btn');
-const stopBtn = document.getElementById('stop-btn');
+const micBtn = document.getElementById('mic-btn');
+const micIcon = micBtn.querySelector('.mic-icon');
+const stopIcon = micBtn.querySelector('.stop-icon');
+const micLabel = micBtn.querySelector('.mic-label');
 const statusMsg = document.getElementById('status-message');
 const modelLoadingEl = document.getElementById('model-loading');
 const modelProgressEl = document.getElementById('model-progress');
@@ -36,8 +38,20 @@ function setStatus(msg) {
   statusMsg.textContent = msg;
 }
 
-function setRecordEnabled(enabled) {
-  recordBtn.disabled = !enabled;
+function setMicEnabled(enabled) {
+  micBtn.disabled = !enabled;
+}
+
+function setMicState(recording) {
+  micIcon.hidden = recording;
+  stopIcon.hidden = !recording;
+  micLabel.textContent = recording ? 'Stop' : 'Record';
+  micBtn.setAttribute('aria-label', recording ? 'Stop recording' : 'Start recording');
+  if (recording) {
+    micBtn.classList.add('recording');
+  } else {
+    micBtn.classList.remove('recording');
+  }
 }
 
 const MODEL_STORAGE_KEY = 'voice-selected-model';
@@ -86,7 +100,7 @@ function ensureWorker() {
     modelLoadingEl.hidden = true;
     transcribingEl.hidden = true;
     isTranscribing = false;
-    setRecordEnabled(true);
+    setMicEnabled(true);
     modelSelectEl.disabled = false;
     setStatus('Failed to load transcription engine. Check browser console for details.');
   });
@@ -118,7 +132,7 @@ function sendToWorker(float32Array) {
   // Snapshot existing text so new results append after it
   baseTranscript = transcriptOutputEl.textContent;
   transcribingEl.hidden = false;
-  setRecordEnabled(false);
+  setMicEnabled(false);
   setStatus('Transcribing…');
   worker.postMessage({
     audio: float32Array,
@@ -237,7 +251,7 @@ function handleWorkerMessage(event) {
       transcriptOutputEl.textContent = fullText;
       transcribingEl.hidden = true;
       isTranscribing = false;
-      setRecordEnabled(true);
+      setMicEnabled(true);
       modelSelectEl.disabled = false;
       updateActionButtons();
       if (fullText) {
@@ -254,7 +268,7 @@ function handleWorkerMessage(event) {
     case 'error':
       transcribingEl.hidden = true;
       isTranscribing = false;
-      setRecordEnabled(true);
+      setMicEnabled(true);
       modelSelectEl.disabled = false;
       setStatus(`Error: ${data ?? 'Unknown error'}`);
       break;
@@ -304,11 +318,8 @@ async function processAudio(chunks) {
   }
 }
 
-recordBtn.addEventListener('click', async () => {
-  if (isRecording || isTranscribing) return;
-
-  // Disable button while waiting for mic permission to avoid double-click races
-  setRecordEnabled(false);
+async function startRecording() {
+  setMicEnabled(false);
   setStatus('Requesting microphone access…');
 
   try {
@@ -326,14 +337,13 @@ recordBtn.addEventListener('click', async () => {
     mediaRecorder.start();
     isRecording = true;
 
-    recordBtn.hidden = true;
-    stopBtn.hidden = false;
-    stopBtn.classList.add('recording');
+    setMicState(true);
+    setMicEnabled(true);
     modelSelectEl.disabled = true;
 
     setStatus('Recording… click Stop when done');
   } catch (error) {
-    setRecordEnabled(true);
+    setMicEnabled(true);
     if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
       setStatus('Microphone access denied. Please allow microphone access and try again.');
     } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
@@ -343,19 +353,16 @@ recordBtn.addEventListener('click', async () => {
       console.error('getUserMedia error:', error);
     }
   }
-});
+}
 
-stopBtn.addEventListener('click', () => {
+function stopRecording() {
   if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
 
   mediaRecorder.onstop = async () => {
-    // Release the microphone
     mediaRecorder.stream.getTracks().forEach((track) => track.stop());
 
     isRecording = false;
-    recordBtn.hidden = false;
-    stopBtn.hidden = true;
-    stopBtn.classList.remove('recording');
+    setMicState(false);
 
     setStatus('Processing audio…');
 
@@ -365,7 +372,6 @@ stopBtn.addEventListener('click', () => {
       if (isModelReady) {
         sendToWorker(float32Array);
       } else {
-        // Stash audio; sendToWorker is called when worker posts 'ready'
         pendingAudio = float32Array;
         setStatus(
           isModelLoading
@@ -374,7 +380,7 @@ stopBtn.addEventListener('click', () => {
         );
       }
     } catch (error) {
-      setRecordEnabled(true);
+      setMicEnabled(true);
       modelSelectEl.disabled = false;
       setStatus(`Error processing audio: ${error.message}`);
       console.error('processAudio error:', error);
@@ -382,6 +388,15 @@ stopBtn.addEventListener('click', () => {
   };
 
   mediaRecorder.stop();
+}
+
+micBtn.addEventListener('click', () => {
+  if (isTranscribing) return;
+  if (isRecording) {
+    stopRecording();
+  } else {
+    startRecording();
+  }
 });
 
 copyBtn.addEventListener('click', async () => {
