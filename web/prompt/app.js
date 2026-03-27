@@ -1,5 +1,10 @@
 import { initResizer } from "/resizer.js";
-import { renderSessionList, connectSessionChangeEvents, initAppMenu, getFrontendConfig } from "/shared.js";
+import {
+  renderSessionList,
+  connectSessionChangeEvents,
+  initAppMenu,
+  getFrontendConfig,
+} from "/shared.js";
 
 const sessionListEl = document.getElementById("session-list");
 const currentSessionEl = document.getElementById("current-session");
@@ -52,13 +57,20 @@ async function refreshSessions() {
     console.error("Failed to load sessions:", error);
     sessions = [];
   }
-  if (selectedSessionId && !sessions.some((session) => session.id === selectedSessionId)) {
+  if (
+    selectedSessionId &&
+    !sessions.some((session) => session.id === selectedSessionId)
+  ) {
     selectedSessionId = null;
+  }
+  if (!selectedSessionId && sessions.length > 0) {
+    selectedSessionId = sessions[0].id;
   }
   renderSessionList(sessionListEl, sessions, selectedSessionId, selectSession);
   if (selectedSessionId) {
     const session = sessions.find((entry) => entry.id === selectedSessionId);
-    currentSessionEl.textContent = session?.title || session?.directory || "Session";
+    currentSessionEl.textContent =
+      session?.title || session?.directory || "Session";
   } else {
     currentSessionEl.textContent = "Select a session to run a prompt";
   }
@@ -68,7 +80,8 @@ async function refreshSessions() {
 function selectSession(sessionId) {
   selectedSessionId = sessionId;
   const session = sessions.find((entry) => entry.id === sessionId);
-  currentSessionEl.textContent = session?.title || session?.directory || "Session";
+  currentSessionEl.textContent =
+    session?.title || session?.directory || "Session";
   renderSessionList(sessionListEl, sessions, selectedSessionId, selectSession);
   updateRunButton();
 }
@@ -83,11 +96,14 @@ async function runPrompt() {
   statusTextEl.textContent = "Running prompt...";
   promptOutputEl.textContent = "";
   try {
-    const res = await fetch(`/api/sessions/${encodeURIComponent(selectedSessionId)}/prompt`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, ...(model ? { model } : {}) }),
-    });
+    const res = await fetch(
+      `/api/sessions/${encodeURIComponent(selectedSessionId)}/prompt`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, ...(model ? { model } : {}) }),
+      },
+    );
     if (!res.ok) {
       let message = "Failed to run prompt";
       try {
@@ -109,7 +125,10 @@ async function runPrompt() {
     }
     const data = await res.json();
     statusTextEl.textContent = "Prompt completed successfully.";
-    promptOutputEl.textContent = typeof data.output === "string" && data.output ? data.output : "(no output)";
+    promptOutputEl.textContent =
+      typeof data.output === "string" && data.output
+        ? data.output
+        : "(no output)";
   } catch (error) {
     statusTextEl.textContent = `Prompt failed: ${error instanceof Error ? error.message : String(error)}`;
   } finally {

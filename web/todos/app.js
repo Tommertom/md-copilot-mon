@@ -429,6 +429,9 @@ async function refreshSessions() {
     selectedSessionId = null;
     selectedTable = "";
   }
+  if (!selectedSessionId && sessions.length > 0) {
+    selectedSessionId = sessions[0].id;
+  }
   renderSessionList(sessionListEl, sessions, selectedSessionId, selectSession);
   if (selectedSessionId) {
     await loadSessionData(selectedSessionId);

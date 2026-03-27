@@ -484,6 +484,9 @@ async function refreshSessions({ force = false } = {}) {
   if (selectedSessionId && !sessions.some((s) => s.id === selectedSessionId)) {
     selectedSessionId = null;
   }
+  if (!selectedSessionId && sessions.length > 0) {
+    selectedSessionId = sessions[0].id;
+  }
   renderSessionList(sessionListEl, sessions, selectedSessionId, selectSession);
   if (selectedSessionId) {
     await loadEvents(selectedSessionId, { force });

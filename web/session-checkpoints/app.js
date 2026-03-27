@@ -1,5 +1,12 @@
 import { initResizer } from "/resizer.js";
-import { escapeHtml, formatSize, formatMtime, renderSessionList, connectSessionChangeEvents, initAppMenu } from "/shared.js";
+import {
+  escapeHtml,
+  formatSize,
+  formatMtime,
+  renderSessionList,
+  connectSessionChangeEvents,
+  initAppMenu,
+} from "/shared.js";
 
 const sessionListEl = document.getElementById("session-list");
 const dataViewEl = document.getElementById("data-view");
@@ -65,7 +72,9 @@ function renderCheckpointFiles(files) {
 
 async function loadSessionCheckpoints(sessionId) {
   try {
-    const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/checkpoints`);
+    const res = await fetch(
+      `/api/sessions/${encodeURIComponent(sessionId)}/checkpoints`,
+    );
     if (!res.ok) {
       dataViewEl.innerHTML = `<p class="placeholder">Failed to load session checkpoint files.</p>`;
       clearJsonViewer("Select a checkpoint JSON file to view");
@@ -140,6 +149,9 @@ async function refreshSessions() {
     selectedSessionId = null;
     checkpointFiles = [];
     selectedCheckpointPath = "";
+  }
+  if (!selectedSessionId && sessions.length > 0) {
+    selectedSessionId = sessions[0].id;
   }
   renderSessionList(sessionListEl, sessions, selectedSessionId, selectSession);
   if (selectedSessionId) {

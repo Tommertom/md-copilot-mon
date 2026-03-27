@@ -1,5 +1,12 @@
 import { initResizer } from "/resizer.js";
-import { escapeHtml, formatSize, formatMtime, renderSessionList, connectSessionChangeEvents, initAppMenu } from "/shared.js";
+import {
+  escapeHtml,
+  formatSize,
+  formatMtime,
+  renderSessionList,
+  connectSessionChangeEvents,
+  initAppMenu,
+} from "/shared.js";
 
 const sessionListEl = document.getElementById("session-list");
 const dataViewEl = document.getElementById("data-view");
@@ -30,7 +37,9 @@ function renderFiles(files, sessionId) {
 
 async function loadSessionFiles(sessionId) {
   try {
-    const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/files`);
+    const res = await fetch(
+      `/api/sessions/${encodeURIComponent(sessionId)}/files`,
+    );
     if (!res.ok) {
       dataViewEl.innerHTML = `<p class="placeholder">Failed to load session files.</p>`;
       return;
@@ -38,7 +47,10 @@ async function loadSessionFiles(sessionId) {
     const data = await res.json();
     const session = sessions.find((s) => s.id === sessionId);
     const title = session?.title || session?.directory || "Session";
-    const directory = typeof data?.directory === "string" && data.directory ? ` — ${data.directory}` : "";
+    const directory =
+      typeof data?.directory === "string" && data.directory
+        ? ` — ${data.directory}`
+        : "";
     currentSessionEl.textContent = `${title}${directory}`;
     dataViewEl.innerHTML = renderFiles(data?.files, sessionId);
   } catch (error) {
@@ -64,6 +76,9 @@ async function refreshSessions() {
 
   if (selectedSessionId && !sessions.some((s) => s.id === selectedSessionId)) {
     selectedSessionId = null;
+  }
+  if (!selectedSessionId && sessions.length > 0) {
+    selectedSessionId = sessions[0].id;
   }
   renderSessionList(sessionListEl, sessions, selectedSessionId, selectSession);
   if (selectedSessionId) {

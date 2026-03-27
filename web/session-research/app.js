@@ -1,10 +1,19 @@
 import { initResizer } from "/resizer.js";
-import { escapeHtml, formatSize, formatMtime, renderSessionList, connectSessionChangeEvents, initAppMenu } from "/shared.js";
+import {
+  escapeHtml,
+  formatSize,
+  formatMtime,
+  renderSessionList,
+  connectSessionChangeEvents,
+  initAppMenu,
+} from "/shared.js";
 
 const sessionListEl = document.getElementById("session-list");
 const dataViewEl = document.getElementById("data-view");
 const currentSessionEl = document.getElementById("current-session");
-const refreshSessionResearchBtn = document.getElementById("refresh-session-research");
+const refreshSessionResearchBtn = document.getElementById(
+  "refresh-session-research",
+);
 
 let sessions = [];
 let selectedSessionId = null;
@@ -30,7 +39,9 @@ function renderResearchFiles(files, sessionId) {
 
 async function loadSessionResearch(sessionId) {
   try {
-    const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/research`);
+    const res = await fetch(
+      `/api/sessions/${encodeURIComponent(sessionId)}/research`,
+    );
     if (!res.ok) {
       dataViewEl.innerHTML = `<p class="placeholder">Failed to load session research files.</p>`;
       return;
@@ -38,7 +49,10 @@ async function loadSessionResearch(sessionId) {
     const data = await res.json();
     const session = sessions.find((s) => s.id === sessionId);
     const title = session?.title || session?.directory || "Session";
-    const directory = typeof data?.directory === "string" && data.directory ? ` — ${data.directory}` : "";
+    const directory =
+      typeof data?.directory === "string" && data.directory
+        ? ` — ${data.directory}`
+        : "";
     currentSessionEl.textContent = `${title}${directory}`;
     dataViewEl.innerHTML = renderResearchFiles(data?.files, sessionId);
   } catch (error) {
@@ -64,6 +78,9 @@ async function refreshSessions() {
 
   if (selectedSessionId && !sessions.some((s) => s.id === selectedSessionId)) {
     selectedSessionId = null;
+  }
+  if (!selectedSessionId && sessions.length > 0) {
+    selectedSessionId = sessions[0].id;
   }
   renderSessionList(sessionListEl, sessions, selectedSessionId, selectSession);
   if (selectedSessionId) {
