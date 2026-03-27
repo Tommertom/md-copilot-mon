@@ -314,7 +314,7 @@ function renderStats(events) {
       <div class="summary-card"><div class="summary-label">Assistant turns</div><div class="summary-value">${stats.assistantTurns}</div></div>
       <div class="summary-card"><div class="summary-label">Tool calls</div><div class="summary-value">${stats.toolCalls}</div></div>
       <div class="summary-card"><div class="summary-label">Tool failures</div><div class="summary-value">${stats.toolFailures}</div></div>
-      <div class="summary-card"><div class="summary-label">Subagents spawned</div><div class="summary-value">${stats.subagentsStarted}</div></div>
+      <div class="summary-card" data-filter="subagent.started" style="cursor:pointer" title="Click to filter by subagent.started"><div class="summary-label">Subagents spawned</div><div class="summary-value">${stats.subagentsStarted}</div></div>
       <div class="summary-card"><div class="summary-label">Session duration (sec)</div><div class="summary-value">${stats.durationSeconds ?? "-"}</div></div>
       <div class="summary-card"><div class="summary-label">Top tools</div><div class="summary-value">${escapeHtml(stats.topTools)}</div></div>
     </div>
@@ -561,6 +561,20 @@ toggleSortBtn.addEventListener("click", () => {
   sortDirection = sortDirection === "desc" ? "asc" : "desc";
   updateSortToggle();
   setActiveView(selectedView);
+});
+
+statsContainerEl.addEventListener("click", (event) => {
+  if (selectedView !== "rendered") return;
+  const card = event.target.closest(".summary-card[data-filter]");
+  if (!card) return;
+  const filter = card.dataset.filter;
+  // Toggle off if the same filter is already active
+  const newQuery = searchQuery === filter ? "" : filter;
+  searchQuery = newQuery;
+  eventSearchEl.value = newQuery;
+  timelineContainerEl.innerHTML = renderTimeline(
+    getFilteredEvents(getDisplayedEvents(loadedEvents)),
+  );
 });
 
 eventSearchEl.addEventListener("input", () => {

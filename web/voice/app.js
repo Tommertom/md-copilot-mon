@@ -144,7 +144,11 @@ function updateAggregateProgress() {
   console.log('[voice] aggregate progress:', Math.round(pct) + '%',
     'hasByteProgress:', hasByteProgress, 'filesInitiated:', filesInitiated, 'filesDone:', filesDone);
   modelProgressEl.value = pct;
-  modelProgressLabelEl.textContent = `Loading model: ${Math.round(pct)}%`;
+  if (pct >= 100) {
+    modelProgressLabelEl.textContent = 'Initializing model…';
+  } else {
+    modelProgressLabelEl.textContent = `Loading model: ${Math.round(pct)}%`;
+  }
 }
 
 function updateCopyButton() {
