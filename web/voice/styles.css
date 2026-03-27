@@ -100,6 +100,10 @@
   transition: background 0.15s, transform 0.1s;
 }
 
+#mic-btn svg[hidden] {
+  display: none;
+}
+
 #mic-btn:hover {
   background: #c53030;
 }
