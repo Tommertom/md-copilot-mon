@@ -347,6 +347,9 @@ copyBtn.addEventListener('click', async () => {
 // When model changes, reset readiness so the new model is loaded on next record
 modelSelectEl.addEventListener('change', () => {
   isModelReady = false;
+  isModelLoading = false;
+  modelLoadingEl.hidden = true;
+  modelProgressEl.value = 0;
   fileProgress.clear();
   filesInitiated = 0;
   filesDone = 0;
