@@ -90,7 +90,8 @@ self.addEventListener("message", async (event) => {
             do_sample: false,
             chunk_length_s: isDistilWhisper ? 20 : 30,
             stride_length_s: isDistilWhisper ? 3 : 5,
-            return_timestamps: false,
+            return_timestamps: true,
+            force_full_sequences: false,
             language,
             task: subtask,
             callback_function: (beams) => {
