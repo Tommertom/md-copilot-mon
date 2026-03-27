@@ -24,6 +24,11 @@ let isModelLoading = false;
 let pendingAudio = null;
 /** @type {Map<string, {loaded: number, total: number}>} Per-file download progress */
 const fileProgress = new Map();
+/** Track files that completed so we can show progress even for cached models */
+let filesInitiated = 0;
+let filesDone = 0;
+/** True if at least one 'progress' event with byte info was received */
+let hasByteProgress = false;
 
 function setStatus(msg) {
   statusMsg.textContent = msg;
@@ -71,6 +76,12 @@ function ensureWorker() {
     modelSelectEl.disabled = false;
     setStatus('Failed to load transcription engine. Check browser console for details.');
   });
+  // Start model download immediately (don't wait for audio).
+  // The message is queued until the worker's ESM module finishes importing.
+  isModelLoading = true;
+  modelLoadingEl.hidden = false;
+  modelProgressLabelEl.textContent = 'Loading transcription engine…';
+  worker.postMessage({ model: getSelectedModel() });
 }
 
 function sendToWorker(float32Array) {
@@ -90,14 +101,22 @@ function sendToWorker(float32Array) {
 }
 
 function updateAggregateProgress() {
-  let totalLoaded = 0;
-  let totalSize = 0;
-  for (const entry of fileProgress.values()) {
-    totalLoaded += entry.loaded;
-    totalSize += entry.total;
+  let pct = 0;
+  if (hasByteProgress) {
+    // Use byte-level progress (precise)
+    let totalLoaded = 0;
+    let totalSize = 0;
+    for (const entry of fileProgress.values()) {
+      totalLoaded += entry.loaded;
+      totalSize += entry.total;
+    }
+    pct = totalSize > 0 ? (totalLoaded / totalSize) * 100 : 0;
+  } else if (filesInitiated > 0) {
+    // Fallback: use file completion count (for cached models)
+    pct = (filesDone / filesInitiated) * 100;
   }
-  const pct = totalSize > 0 ? (totalLoaded / totalSize) * 100 : 0;
-  console.log('[voice] aggregate progress:', Math.round(pct) + '%', 'files:', fileProgress.size, 'loaded:', totalLoaded, 'total:', totalSize);
+  console.log('[voice] aggregate progress:', Math.round(pct) + '%',
+    'hasByteProgress:', hasByteProgress, 'filesInitiated:', filesInitiated, 'filesDone:', filesDone);
   modelProgressEl.value = pct;
   modelProgressLabelEl.textContent = `Loading model: ${Math.round(pct)}%`;
 }
@@ -116,6 +135,7 @@ function handleWorkerMessage(event) {
     case 'initiate':
       isModelLoading = true;
       modelLoadingEl.hidden = false;
+      filesInitiated++;
       if (file) {
         fileProgress.set(file, { loaded: 0, total: 0 });
       }
@@ -125,24 +145,26 @@ function handleWorkerMessage(event) {
     case 'progress':
       console.log('[voice] progress event — file:', file, 'loaded:', loaded, 'total:', total, 'progress:', progress);
       if (file && typeof loaded === 'number' && typeof total === 'number' && total > 0) {
+        hasByteProgress = true;
         fileProgress.set(file, { loaded, total });
         updateAggregateProgress();
       } else if (typeof progress === 'number' && file) {
         // Fallback: some versions report only 0-100 per file
+        hasByteProgress = true;
         fileProgress.set(file, { loaded: progress, total: 100 });
         updateAggregateProgress();
       }
       break;
 
     case 'done':
+      filesDone++;
       if (file) {
-        // Mark this file as fully loaded
         const entry = fileProgress.get(file);
-        if (entry) {
-          entry.loaded = entry.total || entry.loaded;
-          updateAggregateProgress();
+        if (entry && entry.total > 0) {
+          entry.loaded = entry.total;
         }
       }
+      updateAggregateProgress();
       break;
 
     case 'ready':
@@ -151,6 +173,9 @@ function handleWorkerMessage(event) {
       modelLoadingEl.hidden = true;
       modelProgressEl.value = 0;
       fileProgress.clear();
+      filesInitiated = 0;
+      filesDone = 0;
+      hasByteProgress = false;
       if (!isRecording && !isTranscribing) {
         setStatus('Ready to record');
       }
@@ -322,6 +347,10 @@ copyBtn.addEventListener('click', async () => {
 // When model changes, reset readiness so the new model is loaded on next record
 modelSelectEl.addEventListener('change', () => {
   isModelReady = false;
+  fileProgress.clear();
+  filesInitiated = 0;
+  filesDone = 0;
+  hasByteProgress = false;
 });
 
 initAppMenu();

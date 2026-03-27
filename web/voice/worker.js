@@ -64,8 +64,6 @@ self.addEventListener("message", async (event) => {
         language = null,
     } = event.data;
 
-    if (!audio) return;
-
     const modelId = resolveModelId(model, multilingual);
 
     // Load or reload if the requested model differs
@@ -73,6 +71,9 @@ self.addEventListener("message", async (event) => {
         activeModelId = modelId;
         transcriberReady = loadModel(modelId, quantized);
     }
+
+    // If no audio, this was a preload-only request
+    if (!audio) return;
 
     const transcriber = await transcriberReady;
     if (!transcriber) {
