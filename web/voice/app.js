@@ -76,12 +76,11 @@ function ensureWorker() {
     modelSelectEl.disabled = false;
     setStatus('Failed to load transcription engine. Check browser console for details.');
   });
-  // Start model download immediately (don't wait for audio).
-  // The message is queued until the worker's ESM module finishes importing.
+  // Show loading UI immediately; the actual preload message is sent once the
+  // worker signals its ESM module has loaded (see 'worker-ready' in handler).
   isModelLoading = true;
   modelLoadingEl.hidden = false;
   modelProgressLabelEl.textContent = 'Loading transcription engine…';
-  worker.postMessage({ model: getSelectedModel() });
 }
 
 function sendToWorker(float32Array) {
@@ -210,7 +209,14 @@ function handleWorkerMessage(event) {
       break;
 
     default:
-      console.log('[voice] unhandled worker message status:', status, 'type:', msg.type);
+      if (msg.type === 'worker-ready') {
+        // ESM module loaded — now safe to send messages to the worker.
+        // Kick off model preload so it downloads while the user records.
+        console.log('[voice] worker ESM ready, sending preload');
+        worker.postMessage({ model: getSelectedModel() });
+      } else {
+        console.log('[voice] unhandled worker message status:', status, 'type:', msg.type);
+      }
       break;
   }
 }
