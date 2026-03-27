@@ -310,7 +310,7 @@ function renderStats(events) {
   return `
     <div class="summary-grid">
       <div class="summary-card"><div class="summary-label">Total events</div><div class="summary-value">${stats.totalEvents}</div></div>
-      <div class="summary-card"><div class="summary-label">User messages</div><div class="summary-value">${stats.userMessages}</div></div>
+      <div class="summary-card" data-filter="user.message" style="cursor:pointer" title="Click to filter by user.message"><div class="summary-label">User messages</div><div class="summary-value">${stats.userMessages}</div></div>
       <div class="summary-card"><div class="summary-label">Assistant turns</div><div class="summary-value">${stats.assistantTurns}</div></div>
       <div class="summary-card"><div class="summary-label">Tool calls</div><div class="summary-value">${stats.toolCalls}</div></div>
       <div class="summary-card"><div class="summary-label">Tool failures</div><div class="summary-value">${stats.toolFailures}</div></div>
