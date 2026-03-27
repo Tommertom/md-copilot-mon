@@ -68,12 +68,14 @@
               <div class="transcript-header">
                 <span class="transcript-label">Transcript</span>
                 <button id="copy-btn" type="button" class="copy-btn" hidden aria-label="Copy transcript">Copy</button>
+                <button id="clear-btn" type="button" class="copy-btn" hidden aria-label="Clear transcript">Clear</button>
               </div>
               <div
                 id="transcript-output"
-                role="region"
+                contenteditable="true"
+                role="textbox"
                 aria-label="Transcript output"
-                aria-live="polite"
+                aria-multiline="true"
               ></div>
             </div>
           </div>

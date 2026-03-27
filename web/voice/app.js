@@ -11,6 +11,7 @@ const transcribingEl = document.getElementById('transcribing-indicator');
 const transcriptOutputEl = document.getElementById('transcript-output');
 const modelSelectEl = document.getElementById('model-select');
 const copyBtn = document.getElementById('copy-btn');
+const clearBtn = document.getElementById('clear-btn');
 
 // State
 let worker = null;
@@ -27,7 +28,8 @@ const fileProgress = new Map();
 /** Track files that completed so we can show progress even for cached models */
 let filesInitiated = 0;
 let filesDone = 0;
-/** True if at least one 'progress' event with byte info was received */
+/** Text that existed before the current transcription started. */
+let baseTranscript = '';
 let hasByteProgress = false;
 
 function setStatus(msg) {
@@ -113,6 +115,8 @@ function requestModelLoad() {
 function sendToWorker(float32Array) {
   console.log('[voice] sendToWorker, audio length:', float32Array.length, 'model:', getSelectedModel());
   isTranscribing = true;
+  // Snapshot existing text so new results append after it
+  baseTranscript = transcriptOutputEl.textContent;
   transcribingEl.hidden = false;
   setRecordEnabled(false);
   setStatus('Transcribing…');
@@ -151,8 +155,10 @@ function updateAggregateProgress() {
   }
 }
 
-function updateCopyButton() {
-  copyBtn.hidden = !transcriptOutputEl.textContent;
+function updateActionButtons() {
+  const hasText = !!transcriptOutputEl.textContent;
+  copyBtn.hidden = !hasText;
+  clearBtn.hidden = !hasText;
 }
 
 /** @param {MessageEvent} event */
@@ -215,22 +221,27 @@ function handleWorkerMessage(event) {
       }
       break;
 
-    case 'update':
-      transcriptOutputEl.textContent = typeof data === 'string' ? data : '';
+    case 'update': {
+      const partial = typeof data === 'string' ? data : '';
+      const sep = baseTranscript ? '\n' : '';
+      transcriptOutputEl.textContent = baseTranscript + sep + partial;
       transcribingEl.hidden = false;
-      updateCopyButton();
+      updateActionButtons();
       break;
+    }
 
     case 'complete': {
       const text = typeof data === 'string' ? data : '';
-      transcriptOutputEl.textContent = text;
+      const sep = baseTranscript ? '\n' : '';
+      const fullText = text ? baseTranscript + sep + text : baseTranscript;
+      transcriptOutputEl.textContent = fullText;
       transcribingEl.hidden = true;
       isTranscribing = false;
       setRecordEnabled(true);
       modelSelectEl.disabled = false;
-      updateCopyButton();
-      if (text) {
-        navigator.clipboard.writeText(text).then(
+      updateActionButtons();
+      if (fullText) {
+        navigator.clipboard.writeText(fullText).then(
           () => setStatus('Transcription complete — copied to clipboard'),
           () => setStatus('Transcription complete'),
         );
@@ -384,6 +395,16 @@ copyBtn.addEventListener('click', async () => {
   } catch {
     setStatus('Failed to copy — try selecting the text manually.');
   }
+});
+
+clearBtn.addEventListener('click', () => {
+  transcriptOutputEl.textContent = '';
+  updateActionButtons();
+});
+
+// Keep buttons in sync when user manually edits the transcript
+transcriptOutputEl.addEventListener('input', () => {
+  updateActionButtons();
 });
 
 // When model changes, persist choice and immediately start loading the new model

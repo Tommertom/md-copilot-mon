@@ -225,6 +225,12 @@
   overflow-wrap: break-word;
   white-space: pre-wrap;
   color: #1a1a1a;
+  outline: none;
+}
+
+#transcript-output:focus {
+  border-color: #4b8df8;
+  box-shadow: 0 0 0 2px rgba(75, 141, 248, 0.2);
 }
 
 #transcript-output:empty::before {
