@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Voice Transcription</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="stylesheet" href="/voice/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <main class="content">
+        <div class="toolbar">
+          <span class="toolbar-title">Voice</span>
+          <div id="toolbar-actions">
+            <div class="app-menu">
+              <button
+                id="app-menu-button"
+                type="button"
+                class="icon-button"
+                aria-label="Open app menu"
+                aria-haspopup="true"
+                aria-expanded="false"
+                aria-controls="app-menu"
+              >
+                <span class="app-grid-icon" aria-hidden="true">
+                  <span></span><span></span><span></span>
+                  <span></span><span></span><span></span>
+                </span>
+              </button>
+              <div id="app-menu" class="menu-popup" hidden></div>
+            </div>
+          </div>
+        </div>
+        <div id="data-view">
+          <div class="voice-panel">
+            <p id="status-message">Ready to record</p>
+            <div id="model-loading" hidden>
+              <p id="model-progress-label">Loading model...</p>
+              <progress id="model-progress" max="100" value="0" aria-label="Model loading progress"></progress>
+            </div>
+            <div class="controls-row">
+              <label class="model-select-label" for="model-select">Model
+                <select id="model-select" aria-label="Whisper model">
+                  <option value="Xenova/whisper-tiny" selected>tiny (~75 MB)</option>
+                  <option value="Xenova/whisper-base">base (~150 MB)</option>
+                  <option value="Xenova/whisper-small">small (~500 MB)</option>
+                </select>
+              </label>
+            </div>
+            <div class="button-row">
+              <button id="record-btn" type="button" aria-label="Start recording">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1.5 4v6a1.5 1.5 0 0 0 3 0V5a1.5 1.5 0 0 0-3 0zM6.5 10a1 1 0 0 1 1 1 4.5 4.5 0 0 0 9 0 1 1 0 1 1 2 0 6.5 6.5 0 0 1-5.5 6.45V20h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.55A6.5 6.5 0 0 1 5.5 11a1 1 0 0 1 1-1z"/>
+                </svg>
+                <span>Record</span>
+              </button>
+              <button id="stop-btn" type="button" aria-label="Stop recording" hidden>
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <rect x="4" y="4" width="16" height="16" rx="2"/>
+                </svg>
+                <span>Stop</span>
+              </button>
+            </div>
+            <div id="transcribing-indicator" hidden aria-live="polite">Transcribing…</div>
+            <div class="transcript-container">
+              <div class="transcript-header">
+                <span class="transcript-label">Transcript</span>
+                <button id="copy-btn" type="button" class="copy-btn" hidden aria-label="Copy transcript">Copy</button>
+              </div>
+              <div
+                id="transcript-output"
+                role="region"
+                aria-label="Transcript output"
+                aria-live="polite"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+    <script type="module" src="/voice/app.js"></script>
+  </body>
+</html>

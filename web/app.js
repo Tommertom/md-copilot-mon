@@ -25,6 +25,7 @@ const menuOpenSessionResearchBtn = document.getElementById(
 );
 const menuOpenIssueBtn = document.getElementById("menu-open-issue");
 const menuOpenPromptBtn = document.getElementById("menu-open-prompt");
+const menuOpenVoiceBtn = document.getElementById("menu-open-voice");
 const saveBtn = document.getElementById("save-file");
 const executePlanBtn = document.getElementById("execute-plan");
 
@@ -403,6 +404,10 @@ function openPromptWindow() {
   openSubappWindow("/prompt/");
 }
 
+function openVoiceWindow() {
+  openSubappWindow("/voice/");
+}
+
 appMenuButton.addEventListener("click", (event) => {
   event.stopPropagation();
   const isOpen = appMenuEl.hidden === false;
@@ -452,6 +457,11 @@ menuOpenIssueBtn.addEventListener("click", () => {
 menuOpenPromptBtn.addEventListener("click", () => {
   setAppMenuOpen(false);
   openPromptWindow();
+});
+
+menuOpenVoiceBtn.addEventListener("click", () => {
+  setAppMenuOpen(false);
+  openVoiceWindow();
 });
 
 document.addEventListener("click", (event) => {

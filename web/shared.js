@@ -112,6 +112,7 @@ export async function initAppMenu() {
     { label: "Checkpoints", path: "/session-checkpoints/" },
     { label: "Research", path: "/session-research/" },
     { label: "Issue", path: "/issue/" },
+    { label: "Voice", path: "/voice/" },
   ];
 
   // Normalise current path to always have a trailing slash.

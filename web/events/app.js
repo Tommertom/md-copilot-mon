@@ -1,5 +1,10 @@
 import { initResizer } from "/resizer.js";
-import { escapeHtml, renderSessionList, connectSessionChangeEvents, initAppMenu } from "/shared.js";
+import {
+  escapeHtml,
+  renderSessionList,
+  connectSessionChangeEvents,
+  initAppMenu,
+} from "/shared.js";
 
 const sessionListEl = document.getElementById("session-list");
 const currentSessionEl = document.getElementById("current-session");
@@ -135,7 +140,9 @@ function toTimelineEntry(event, toolNamesByCallId) {
   }
 
   if (type === "assistant.message") {
-    const toolRequests = Array.isArray(data.toolRequests) ? data.toolRequests : [];
+    const toolRequests = Array.isArray(data.toolRequests)
+      ? data.toolRequests
+      : [];
     const reasoningText =
       typeof data.reasoningText === "string" && data.reasoningText.trim()
         ? data.reasoningText
@@ -146,7 +153,15 @@ function toTimelineEntry(event, toolNamesByCallId) {
         const args = tool.arguments ?? {};
         const lines = [`• ${tool.name || "unknown"}`];
         // Show the most useful argument fields: command, description, query, path, pattern, prompt, input
-        const argKeys = ["command", "description", "query", "path", "pattern", "prompt", "input"];
+        const argKeys = [
+          "command",
+          "description",
+          "query",
+          "path",
+          "pattern",
+          "prompt",
+          "input",
+        ];
         for (const key of argKeys) {
           if (typeof args[key] === "string" && args[key].trim()) {
             lines.push(`  ${key}: ${args[key].trim()}`);
@@ -154,7 +169,9 @@ function toTimelineEntry(event, toolNamesByCallId) {
         }
         return lines.join("\n");
       });
-      const detail = [toolLines.join("\n\n"), reasoningText].filter(Boolean).join("\n\n---\n");
+      const detail = [toolLines.join("\n\n"), reasoningText]
+        .filter(Boolean)
+        .join("\n\n---\n");
       return {
         type,
         time,
@@ -165,7 +182,7 @@ function toTimelineEntry(event, toolNamesByCallId) {
     const content =
       typeof data.content === "string" && data.content.trim()
         ? data.content
-        : reasoningText ?? "(empty assistant content)";
+        : (reasoningText ?? "(empty assistant content)");
     return {
       type,
       time,
@@ -193,16 +210,22 @@ function toTimelineEntry(event, toolNamesByCallId) {
     if (data.error?.message) {
       detail += `\nError: ${data.error.message}`;
     }
+    const truncateLines = (text, max = 15) => {
+      const lines = text.split("\n");
+      return lines.length > max
+        ? lines.slice(0, max).join("\n") + "\n..."
+        : text;
+    };
     if (toolName === "report_intent") {
       if (data.result?.detailedContent) {
-        detail += `\n${data.result.detailedContent}`;
+        detail += `\n${truncateLines(data.result.detailedContent)}`;
       }
     } else {
       if (data.result?.content) {
-        detail += `\n${data.result.content}`;
+        detail += `\n${truncateLines(data.result.content)}`;
       }
       if (data.result?.detailedContent) {
-        detail += `\n${data.result.detailedContent}`;
+        detail += `\n${truncateLines(data.result.detailedContent)}`;
       }
     }
     return {
@@ -224,25 +247,15 @@ function toTimelineEntry(event, toolNamesByCallId) {
     };
   }
 
-  if (type === "session.mode_changed") {
-    const previousMode = data.previousMode || "?";
-    const newMode = data.newMode || "?";
-    return {
-      type,
-      time,
-      title: "Mode changed",
-      detail: `${previousMode} → ${newMode}`,
-    };
-  }
-
   if (type === "session.task_complete") {
     return {
       type,
       time,
       title: "Task complete",
-      detail: typeof data.summary === "string" && data.summary.trim()
-        ? data.summary
-        : "(no summary)",
+      detail:
+        typeof data.summary === "string" && data.summary.trim()
+          ? data.summary
+          : "(no summary)",
     };
   }
 
@@ -289,7 +302,8 @@ function renderTimeline(events) {
         entry.type === "assistant.turn_start" ||
         entry.type === "assistant.turn_end" ||
         entry.type === "tool.execution_start" ||
-        entry.type === "session.start"
+        entry.type === "session.start" ||
+        entry.type === "session.mode_changed"
       ) {
         return `<div class="timeline-divider"><span>${escapeHtml(entry.time)}${entry.time ? " · " : ""}${escapeHtml(entry.type)}</span></div>`;
       }
@@ -458,7 +472,9 @@ timelineContainerEl.addEventListener("click", (event) => {
       const btn = event.target;
       const original = btn.textContent;
       btn.textContent = "Copied!";
-      setTimeout(() => { btn.textContent = original; }, 1500);
+      setTimeout(() => {
+        btn.textContent = original;
+      }, 1500);
     });
   }
 });
