@@ -1,15 +1,16 @@
 /**
  * Whisper transcription worker using @xenova/transformers.
  *
- * Audio messages arrive as:
- *   { audio: Float32Array, model, multilingual, quantized, subtask, language }
+ * Messages accepted:
+ *   { model, multilingual, quantized }                          — preload model
+ *   { audio: Float32Array, model, multilingual, quantized, … }  — transcribe
  *
  * Outbound messages:
- *   { status: 'initiate'|'progress'|'done', ... }  — progress_callback pass-through
- *   { status: 'ready' }                             — model fully loaded
- *   { status: 'update', data: string }              — partial transcript
- *   { status: 'complete', data: string }            — final transcript text
- *   { status: 'error', data: string }               — error message
+ *   { status: 'initiate'|'progress'|'done', … }  — progress_callback pass-through
+ *   { status: 'ready' }                           — model fully loaded
+ *   { status: 'update', data: string }            — partial transcript
+ *   { status: 'complete', data: string }          — final transcript text
+ *   { status: 'error', data: string }             — error message
  */
 import { pipeline, env } from "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2";
 
