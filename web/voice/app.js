@@ -38,8 +38,20 @@ function setRecordEnabled(enabled) {
   recordBtn.disabled = !enabled;
 }
 
+const MODEL_STORAGE_KEY = 'voice-selected-model';
+
+// Restore last-used model from localStorage
+const savedModel = localStorage.getItem(MODEL_STORAGE_KEY);
+if (savedModel && modelSelectEl.querySelector(`option[value="${CSS.escape(savedModel)}"]`)) {
+  modelSelectEl.value = savedModel;
+}
+
 function getSelectedModel() {
   return modelSelectEl.value;
+}
+
+function saveSelectedModel() {
+  localStorage.setItem(MODEL_STORAGE_KEY, modelSelectEl.value);
 }
 
 /**
@@ -81,6 +93,21 @@ function ensureWorker() {
   isModelLoading = true;
   modelLoadingEl.hidden = false;
   modelProgressLabelEl.textContent = 'Loading transcription engine…';
+}
+
+/** Reset progress state and tell the worker to start loading the selected model. */
+function requestModelLoad() {
+  isModelReady = false;
+  isModelLoading = true;
+  modelLoadingEl.hidden = false;
+  modelProgressEl.value = 0;
+  fileProgress.clear();
+  filesInitiated = 0;
+  filesDone = 0;
+  hasByteProgress = false;
+  modelProgressLabelEl.textContent = 'Loading model…';
+  setStatus('Loading model…');
+  worker.postMessage({ model: getSelectedModel() });
 }
 
 function sendToWorker(float32Array) {
@@ -211,9 +238,8 @@ function handleWorkerMessage(event) {
     default:
       if (msg.type === 'worker-ready') {
         // ESM module loaded — now safe to send messages to the worker.
-        // Kick off model preload so it downloads while the user records.
         console.log('[voice] worker ESM ready, sending preload');
-        worker.postMessage({ model: getSelectedModel() });
+        requestModelLoad();
       } else {
         console.log('[voice] unhandled worker message status:', status, 'type:', msg.type);
       }
@@ -282,9 +308,6 @@ recordBtn.addEventListener('click', async () => {
     modelSelectEl.disabled = true;
 
     setStatus('Recording… click Stop when done');
-
-    // Create the worker once; it starts loading the model immediately
-    ensureWorker();
   } catch (error) {
     setRecordEnabled(true);
     if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
@@ -350,16 +373,15 @@ copyBtn.addEventListener('click', async () => {
   }
 });
 
-// When model changes, reset readiness so the new model is loaded on next record
+// When model changes, persist choice and immediately start loading the new model
 modelSelectEl.addEventListener('change', () => {
-  isModelReady = false;
-  isModelLoading = false;
-  modelLoadingEl.hidden = true;
-  modelProgressEl.value = 0;
-  fileProgress.clear();
-  filesInitiated = 0;
-  filesDone = 0;
-  hasByteProgress = false;
+  saveSelectedModel();
+  if (worker && !isRecording && !isTranscribing) {
+    requestModelLoad();
+  }
 });
+
+// Start the worker and begin loading the model on page load
+ensureWorker();
 
 initAppMenu();

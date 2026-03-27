@@ -121,10 +121,10 @@
   padding: 10px 12px;
   background: #fff;
   cursor: pointer;
-  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
 }
-.timeline-item:hover {
-  background: #f5f5f5;
+.timeline-item:active {
+  background: #fff;
 }
 .timeline-item.copied {
   background: #e6f4ea;

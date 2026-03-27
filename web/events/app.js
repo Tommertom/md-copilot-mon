@@ -64,6 +64,10 @@ function getSummaryStats(events) {
     (event) => event?.data?.success === false,
   ).length;
 
+  const subagentsStarted = events.filter(
+    (event) => event?.type === "subagent.started",
+  ).length;
+
   const toolUsage = new Map();
   for (const event of toolStarts) {
     const toolName = event?.data?.toolName || "unknown";
@@ -92,6 +96,7 @@ function getSummaryStats(events) {
     assistantTurns,
     toolCalls: toolStarts.length,
     toolFailures,
+    subagentsStarted,
     topTools,
     durationSeconds,
   };
@@ -309,6 +314,7 @@ function renderStats(events) {
       <div class="summary-card"><div class="summary-label">Assistant turns</div><div class="summary-value">${stats.assistantTurns}</div></div>
       <div class="summary-card"><div class="summary-label">Tool calls</div><div class="summary-value">${stats.toolCalls}</div></div>
       <div class="summary-card"><div class="summary-label">Tool failures</div><div class="summary-value">${stats.toolFailures}</div></div>
+      <div class="summary-card"><div class="summary-label">Subagents spawned</div><div class="summary-value">${stats.subagentsStarted}</div></div>
       <div class="summary-card"><div class="summary-label">Session duration (sec)</div><div class="summary-value">${stats.durationSeconds ?? "-"}</div></div>
       <div class="summary-card"><div class="summary-label">Top tools</div><div class="summary-value">${escapeHtml(stats.topTools)}</div></div>
     </div>
