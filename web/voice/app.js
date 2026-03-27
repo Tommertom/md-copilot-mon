@@ -221,15 +221,24 @@ function handleWorkerMessage(event) {
       updateCopyButton();
       break;
 
-    case 'complete':
-      transcriptOutputEl.textContent = typeof data === 'string' ? data : '';
+    case 'complete': {
+      const text = typeof data === 'string' ? data : '';
+      transcriptOutputEl.textContent = text;
       transcribingEl.hidden = true;
       isTranscribing = false;
       setRecordEnabled(true);
       modelSelectEl.disabled = false;
-      setStatus('Transcription complete');
       updateCopyButton();
+      if (text) {
+        navigator.clipboard.writeText(text).then(
+          () => setStatus('Transcription complete — copied to clipboard'),
+          () => setStatus('Transcription complete'),
+        );
+      } else {
+        setStatus('Transcription complete');
+      }
       break;
+    }
 
     case 'error':
       transcribingEl.hidden = true;
