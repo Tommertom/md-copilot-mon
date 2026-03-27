@@ -188,6 +188,7 @@ function toTimelineEntry(event, toolNamesByCallId) {
       time,
       title: "Assistant message",
       detail: content,
+      renderedContent: content,
     };
   }
 
@@ -224,9 +225,9 @@ function toTimelineEntry(event, toolNamesByCallId) {
       if (data.result?.content) {
         detail += `\n${truncateLines(data.result.content)}`;
       }
-      if (data.result?.detailedContent) {
-        detail += `\n${truncateLines(data.result.detailedContent)}`;
-      }
+      // if (data.result?.detailedContent) {
+      //   detail += `\n${truncateLines(data.result.detailedContent)}`;
+      // }
     }
     return {
       type,
@@ -338,13 +339,16 @@ function renderTimeline(events) {
       ) {
         return `<div class="timeline-divider"><span>${escapeHtml(entry.time)}${entry.time ? " · " : ""}${escapeHtml(entry.type)}</span></div>`;
       }
+      const detailHtml = entry.renderedContent
+        ? `<div class="timeline-detail rendered-markdown">${DOMPurify.sanitize(marked.parse(entry.renderedContent))}</div>`
+        : `<div class="timeline-detail">${escapeHtml(entry.detail || "")}</div>`;
       return `
       <article class="timeline-item">
         <div class="timeline-head">
           <div class="timeline-title">${escapeHtml(entry.title)}</div>
           <div class="timeline-type">${escapeHtml(entry.time)}${entry.time ? " · " : ""}${escapeHtml(entry.type)}</div>
         </div>
-        <div class="timeline-detail">${escapeHtml(entry.detail || "")}</div>
+        ${detailHtml}
       </article>
     `;
     })

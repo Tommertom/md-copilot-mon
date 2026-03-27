@@ -27,7 +27,9 @@
           <div class="toolbar-main">
             <span id="current-session">Select a session to view events</span>
             <div id="view-tabs" class="view-tabs" hidden>
-              <button id="tab-rendered" class="view-tab active" type="button">Rendered</button>
+              <button id="tab-rendered" class="view-tab active" type="button">
+                Rendered
+              </button>
               <button id="tab-raw" class="view-tab" type="button">Raw</button>
             </div>
           </div>
@@ -35,10 +37,18 @@
             <button id="toggle-sort" type="button">Sort: Desc</button>
             <button id="refresh-events" type="button">Auto-Refresh: Off</button>
             <div class="app-menu">
-              <button id="app-menu-button" type="button" class="icon-button" aria-label="Open app menu" aria-haspopup="true" aria-expanded="false" aria-controls="app-menu">
+              <button
+                id="app-menu-button"
+                type="button"
+                class="icon-button"
+                aria-label="Open app menu"
+                aria-haspopup="true"
+                aria-expanded="false"
+                aria-controls="app-menu"
+              >
                 <span class="app-grid-icon" aria-hidden="true">
-                  <span></span><span></span><span></span>
-                  <span></span><span></span><span></span>
+                  <span></span><span></span><span></span> <span></span
+                  ><span></span><span></span>
                 </span>
               </button>
               <div id="app-menu" class="menu-popup" hidden></div>
@@ -48,14 +58,23 @@
         <div id="data-view">
           <div id="stats-container"></div>
           <div id="search-bar-container" hidden>
-            <input type="search" id="event-search" placeholder="Filter events..." autocomplete="off" />
+            <input
+              type="search"
+              id="event-search"
+              placeholder="Filter events..."
+              autocomplete="off"
+            />
           </div>
           <div id="timeline-container">
-            <p class="placeholder">Select a session from the sidebar to inspect events.</p>
+            <p class="placeholder">
+              Select a session from the sidebar to inspect events.
+            </p>
           </div>
         </div>
       </main>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/marked@15/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
     <script type="module" src="/events/app.js"></script>
   </body>
 </html>

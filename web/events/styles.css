@@ -79,6 +79,20 @@
 .timeline-type { color: #666; font-size: 12px; white-space: nowrap; }
 .timeline-detail { margin-top: 6px; font-size: 13px; line-height: 1.4; white-space: pre-wrap; }
 
+.timeline-detail.rendered-markdown { white-space: normal; }
+.timeline-detail.rendered-markdown p { margin: 0 0 8px 0; }
+.timeline-detail.rendered-markdown p:last-child { margin-bottom: 0; }
+.timeline-detail.rendered-markdown h1,
+.timeline-detail.rendered-markdown h2,
+.timeline-detail.rendered-markdown h3 { margin: 8px 0 4px 0; font-size: 14px; font-weight: 700; }
+.timeline-detail.rendered-markdown ul,
+.timeline-detail.rendered-markdown ol { margin: 0 0 8px 0; padding-left: 20px; }
+.timeline-detail.rendered-markdown li { margin-bottom: 2px; }
+.timeline-detail.rendered-markdown code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background: #f3f4f6; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+.timeline-detail.rendered-markdown pre { background: #f3f4f6; padding: 8px 10px; border-radius: 4px; overflow-x: auto; margin: 0 0 8px 0; }
+.timeline-detail.rendered-markdown pre code { background: none; padding: 0; }
+.timeline-detail.rendered-markdown blockquote { margin: 0 0 8px 0; padding-left: 10px; border-left: 3px solid #d0d7de; color: #57606a; }
+
 .data-table td { padding: 8px 12px; border-bottom: 1px solid #eee; vertical-align: top; max-width: 400px; overflow-wrap: break-word; }
 .json-cell { white-space: pre-wrap; margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px; }
 .raw-toolbar { display: flex; justify-content: flex-end; padding: 6px 8px; }
